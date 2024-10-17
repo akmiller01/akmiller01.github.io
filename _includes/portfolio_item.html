@@ -1,0 +1,14 @@
+<div>
+    <h2><a href="#{{include.id}}" id="{{include.id}}">{{include.title}}</a></h2>
+    <p>{{include.description}}</p>
+    {% if include.github_link %}
+    <p>Open-source code available here: <a href="{{include.github_link}}" target="_blank">{{include.github_link}}</a></p>
+    {% endif %}
+    {% if include.iframe_src %}
+        <iframe src="{{include.iframe_src}}" scrolling="no" frameborder="0" style="position: relative; height: {{include.iframe_height}}px; width: 100%;"></iframe>
+    {% endif %}
+    {% if include.img_src %}
+        <img src="{{include.img_src}}" style="width:100%"/>
+    {% endif %}
+</div>
+<br>

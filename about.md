@@ -14,5 +14,7 @@ I've worked on topics including malnutrition while making interactive data visua
 
 I’ve also had the privilege to work across different countries, including collaborating with Ugandan developers on database user interface tools, which was a fantastic opportunity to learn from and contribute to new working methods.
 
+To see a few examples of my work, visit the [portfolio page](/portfolio/).
+
 If you are interested in working together with me on a new data science project, please don't hesitate to email me at [alex.k.miller@gmail.com](mailto:alex.k.miller@gmail.com){:target="_blank"} or reach out on my [LinkedIn](www.linkedin.com/in/alexander-miller-7b781059){:target="_blank"}.
 
