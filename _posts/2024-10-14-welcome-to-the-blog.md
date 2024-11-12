@@ -13,7 +13,7 @@ You’ll notice that this post lives in the `_posts` directory of this repositor
 
 Then, go ahead and edit this post and re-build the site to see your changes. You can rebuild the site in many different ways, but the most common way is to run `bundle exec jekyll serve`, which launches a web server and auto-regenerates your site when a file is updated.
 
-To add new posts, simply add a file in the `_posts` directory that follows the convention `YYYY-MM-DD-name-of-post.markdown` and includes the necessary front matter. Take a look at the source for this post to get an idea about how it works. After that, simply commit and push your new post and hey-presto, you've got a new post that appears not only on the [home page](/), but also in the [blog archive](/blog/).
+To add new posts, simply add a file in the `_posts` directory that follows the convention `YYYY-MM-DD-name-of-post.markdown` and includes the necessary front matter. Take a look at the source for this post to get an idea about how it works. After that, simply commit and push your new post and hey-presto, you've got a new post that appears not only on the [home page](/){:target="_blank"}, but also in the [blog archive](/blog/){:target="_blank"}.
 
 Jekyll also offers powerful support for code snippets:
 
@@ -25,9 +25,9 @@ Jekyll also offers powerful support for code snippets:
 <activities></activities>
 {% endhighlight %}
 
-Lastly, Jekyll also has some useful plugins. For example, I've enabled 'jekyll-feed' which automatically creates an Atom (RSS-like) feed at [/feed.xml](/feed.xml). These can be enabled by specifying the version number in the `Gemfile`, and then including the plugin name in `_config.yml`.
+Lastly, Jekyll also has some useful plugins. For example, I've enabled 'jekyll-feed' which automatically creates an Atom (RSS-like) feed at [/feed.xml](/feed.xml){:target="_blank"}. These can be enabled by specifying the version number in the `Gemfile`, and then including the plugin name in `_config.yml`.
 
-Check out the [Jekyll docs][jekyll-docs] for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll’s GitHub repo][jekyll-gh].
+Check out the [Jekyll docs][jekyll-docs]{:target="_blank"} for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll’s GitHub repo][jekyll-gh]{:target="_blank"}.
 
 P.S. I might also recommend that anyone writing blogs in VS Code look into the Spell Checker extension. In VS Code, simply hit CTRL+P and then paste in `ext install streetsidesoftware.code-spell-checker`, which will automatically install the extension. Otherwise, it's very easy to accidentally misspell words!
 
