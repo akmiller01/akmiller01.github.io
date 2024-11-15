@@ -26,13 +26,13 @@ For all models discussed below, the classifier must identify whether a project h
 
 The most basic method we can apply to regularize the dimensions of word embeddings isn’t pooling at all. Despite the fact that the length of text can vary, we know that BERT cannot process sequences longer than 512 tokens, so we can fix the dimensional size of the output embeddings by padding all sequences to that maximum. This is accomplished in practice by setting the `padding` parameter on our tokenizer:
 
-{% highlight python %}  
+{% highlight python %}
 tokenizer(example['text'], truncation=True, padding='max_length')  
 {% endhighlight %}
 
 Passing all of the unpooled, padded embedding values to our classifier model also requires us to define a new model class. This new class will be largely based on the [transformer default BertForSequenceClassification](https://github.com/huggingface/transformers/blob/main/src/transformers/models/bert/modeling_bert.py#L1623){:target="_blank"} class, but instead of the classifier network input shape being BERT’s default hidden size value of 768, we need to set it to 393,216 (one 768 long embedding vector for each of the 512 tokens/padded spaces). Our model will be defined and initialized like so:
 
-{% highlight python %}  
+{% highlight python %}
 class BertForSequenceClassificationUnpooled(BertPreTrainedModel):  
     def __init__(self, config):  
         super().__init__(config)  
@@ -53,7 +53,7 @@ class BertForSequenceClassificationUnpooled(BertPreTrainedModel):
 
 The forward function also needs a slight modification. The BERT last hidden state matrix is of the shape (batch size, sequence length, hidden size) by default (in our case (24, 512, 768)), and we need to reshape it into a matrix of the shape (batch size, sequence length * hidden size) or (24, 393216). This is accomplished with a little reshaping:
 
-{% highlight python %}  
+{% highlight python %}
 batch_size = outputs.last_hidden_state.shape[0]  
 unpooled_output = outputs.last_hidden_state.view(1, -1).reshape(batch_size, self.classifier_input_size)  
 {% endhighlight %}
@@ -72,7 +72,7 @@ Over 5 epochs of training (and 1 hour and 13 minutes on a T4 GPU), the unpooled 
 
 Instead of passing very long, sparse matrices to our classifier network, we can aggregate the embeddings along the hidden state dimension. One simple way to perform this aggregation is by taking the mean. As stated above, the BERT embedding outputs have the shape (batch size, sequence length, hidden size), and because they are a pytorch vector, the mean to reduce them to (batch size, hidden size) can be found like so:
 
-{% highlight python %}  
+{% highlight python %}
 last_hidden_state = outputs.last_hidden_state  
 mean_pooled_output = last_hidden_state.mean(dim=1)  
 {% endhighlight %}
@@ -86,6 +86,26 @@ Otherwise, training and evaluation proceeds as normal. Over 5 epochs of training
 | 3.0 | 0.2048 | 0.2143 | 0.9539 | 0.9407 | 0.9156 | 0.9671 |
 | 4.0 | 0.1847 | 0.2080 | 0.9498 | 0.9357 | 0.9053 | 0.9684 |
 | 5.0 | 0.1706 | 0.2068 | 0.9508 | 0.9370 | 0.9065 | 0.9697 |
+
+## Max pooling
+
+One quick update to this post. In writing it I learned that some people also use max pooling, so I thought I would include it as well. It operates just like mean pooling, but make sure to fetch the `.values` from the max function, as it returns two tensors instead of one (one for max values, and the other for max indices).
+
+{% highlight python %}
+max_pooled_output = last_hidden_state.max(dim=1).values
+{% endhighlight %}
+
+This model was trained using the same 5 epochs, but this time I used a Lambda Labs server with an A6000 GPU. This unfortunately makes the training time incomparable to the models trained on T4s (theoretically I don't see why it should be different from the mean pooling), but it did complete in a blistering 11 minutes and 14 seconds. The max pooled classification model achieved a minimum validation loss of 0.2321 and a corresponding accuracy of 93.88%:
+
+
+| Epoch | Training Loss | Validation Loss | Accuracy | F1 | Precision | Recall |
+| ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| 1.0 | 0.5047 | 0.3547 | 0.8557 | 0.8363 | 0.7315 | 0.9761 |
+| 2.0 | 0.307 | 0.2725 | 0.9142 | 0.8951 | 0.8316 | 0.9690 |
+| 3.0 | 0.2515 | 0.2407 | 0.9417 | 0.9260 | 0.8894 | 0.9658 |
+| 4.0 | 0.2282 | 0.2345 | 0.9388 | 0.9227 | 0.8822 | 0.9671 |
+| 5.0 | 0.2126 | 0.2321 | 0.9388 | 0.9227 | 0.8822 | 0.9671 |
+
 
 ## [CLS] pooling (the default)
 
@@ -105,8 +125,10 @@ Ben Schmidt’s embeddings were made with an older model (Word2vec) that is only
 
 ## Conclusions
 
-After all of that exploration, we come to the conclusion that the default implementation of [CLS] token pooling is not only the fastest method, but also yields the most accurate result. It makes sense that performing back propagation over a neural network that connects 393,216 inputs to 2 outputs takes significantly more training time than one that connects 768 to 2, but why did the classifier with more information fail to produce better results?
+After all of that exploration, we come to the conclusion that the default implementation of [CLS] token pooling is not only the fastest method (trained on a T4 GPU), but also yields the most accurate result. It makes sense that performing back propagation over a neural network that connects 393,216 inputs to 2 outputs takes significantly more training time than one that connects 768 to 2, but why did the classifier with more information fail to produce better results?
 
 At least for the classification of development project text, this tells us that the presence of certain concepts within the text is more important to determining the correct class than the exact position of the concepts within the text. When we reshaped the full, unpooled embedding vector into the matrix used for the classifier network, we preserved all of the ordering information: the values from (1, 1) to (1, 768) correspond to the embeddings for the first token from the first batch, (1, 768) to (1, 1536) correspond to the second token from the first batch, etc. The classifier weights connected to the embedding vector for the first token will only lead to an activation when the concept of gender equality occurs at that exact position, rather than anywhere within the text.
 
 Why does [CLS] pooling slightly out-perform mean pooling? It’s because the [CLS] token itself is the result of the self-attention mechanism of BERT’s transformer. Where some tokens that might yield extreme results in some of the 768 embedding dimensions that could throw off a mean result, BERT’s transformer has been trained to pay attention to which parts of the sentence are the most meaningful for classifying the text.
+
+As for max pooling, that method would be even more susceptible to the issue of extreme values that affected mean pooling. In theory, if one of the 768 dimensions of BERT aligned well with the concept you're trying to measure, max pooling could be a good way of picking out the strongest signal from your data; but it's clear in the case of gender that the dimensional alignment is not good enough to overcome the issues caused by amplifying extreme embedding values.
