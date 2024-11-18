@@ -28,6 +28,8 @@ The black line in the middle of the chart represents the 45-degree line; points 
 
 In order to transform the IATI data in a way that makes it useful for nowcasting aggregate CRS values, a time-series model of CRS funding was developed. The model is formulated such that an aggregate year, sector, and recipient ODA amount reported in the CRS is a function of the amount for the same aggregate reported to IATI in the same year, plus the same aggregate reported to CRS for the prior year, plus the absolute change in the IATI aggregates from the prior year to the current year. For validation, the model was fit using the joined data from above for the years 2016 to 2021, and the root mean-squared error (RMSE) was calculated by comparing the projected CRS value for 2022 to the known value. Models with lower RMSE indicate better fit. The results of the model are below:
 
+<div class="overflow-table" markdown="1">
+
 | Characteristic | Beta | 95% CI*1* | p-value |
 | :---- | :---: | :---: | :---: |
 | usd\_disbursement\_iati | 0.12 | 0.11, 0.13 | \<0.001 |
@@ -35,6 +37,8 @@ In order to transform the IATI data in a way that makes it useful for nowcasting
 | delta\_iati | 0.20 | 0.19, 0.22 | \<0.001 |
 | No. Obs. \= 48,805; Adjusted R² \= 0.830; p-value \= \<0.001 |  |  |  |
 | *1* CI \= Confidence Interval |  |  |  |
+
+</div>
 
 An adjusted R-squared of 0.83 indicates that over 80% of the variation in CRS values can be explained through the auto-regressive CRS component and the IATI components of the model. At this level of aggregation, the untransformed IATI data had an RMSE of 126.9 while the model was able to improve it to 109.5. Most impressively, aggregating the estimated CRS values to year and sector combinations after modelling yields a reduction in RMSE from 2966.3 down to 1458.5. The fit of this year/sector aggregation level can be demonstrated by two side-by-side scatter plots. 
 
