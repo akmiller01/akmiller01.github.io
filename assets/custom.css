@@ -1,0 +1,6 @@
+@media (max-width: 1000px)  {
+    .overflow-table {
+      overflow-x: auto;
+      width: 100%;
+    }
+  }

@@ -60,6 +60,8 @@ unpooled_output = outputs.last_hidden_state.view(1, -1).reshape(batch_size, self
 
 Over 5 epochs of training (and 1 hour and 13 minutes on a T4 GPU), the unpooled classification model achieves a minimum validation loss of 0.3196 and a corresponding accuracy of 92.69%:
 
+<div class="overflow-table" markdown="1">
+
 | Epoch | Training Loss | Validation Loss | Accuracy | F1 | Precision | Recall |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | 1.0 | 1.0053 | 0.5759 | 0.8613 | 0.8326 | 0.7649 | 0.9135 |
@@ -67,6 +69,8 @@ Over 5 epochs of training (and 1 hour and 13 minutes on a T4 GPU), the unpooled 
 | 3.0 | 0.3385 | 0.3461 | 0.9274 | 0.9070 | 0.8775 | 0.9387 |
 | 4.0 | 0.2909 | 0.3244 | 0.9259 | 0.9057 | 0.8716 | 0.9425 |
 | 5.0 | 0.2699 | 0.3196 | 0.9269 | 0.9071 | 0.8715 | 0.9458 |
+
+</div>
 
 ## Mean pooling
 
@@ -79,6 +83,8 @@ mean_pooled_output = last_hidden_state.mean(dim=1)
 
 Otherwise, training and evaluation proceeds as normal. Over 5 epochs of training (and 55 minutes on a T4 GPU), the mean pooled classification model achieves a minimum validation loss of 0.2068 and a corresponding accuracy of 95.08%:
 
+<div class="overflow-table" markdown="1">
+
 | Epoch | Training Loss | Validation Loss | Accuracy | F1 | Precision | Recall |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | 1.0 | 0.4392 | 0.2876 | 0.9078 | 0.8878 | 0.8219 | 0.9651 |
@@ -86,6 +92,8 @@ Otherwise, training and evaluation proceeds as normal. Over 5 epochs of training
 | 3.0 | 0.2048 | 0.2143 | 0.9539 | 0.9407 | 0.9156 | 0.9671 |
 | 4.0 | 0.1847 | 0.2080 | 0.9498 | 0.9357 | 0.9053 | 0.9684 |
 | 5.0 | 0.1706 | 0.2068 | 0.9508 | 0.9370 | 0.9065 | 0.9697 |
+
+</div>
 
 ## Max pooling
 
@@ -97,6 +105,7 @@ max_pooled_output = last_hidden_state.max(dim=1).values
 
 This model was trained using the same 5 epochs, but this time I used a Lambda Labs server with an A6000 GPU. This unfortunately makes the training time incomparable to the models trained on T4s (theoretically I don't see why it should be different from the mean pooling), but it did complete in a blistering 11 minutes and 14 seconds. The max pooled classification model achieved a minimum validation loss of 0.2321 and a corresponding accuracy of 93.88%:
 
+<div class="overflow-table" markdown="1">
 
 | Epoch | Training Loss | Validation Loss | Accuracy | F1 | Precision | Recall |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
@@ -105,6 +114,8 @@ This model was trained using the same 5 epochs, but this time I used a Lambda La
 | 3.0 | 0.2515 | 0.2407 | 0.9417 | 0.9260 | 0.8894 | 0.9658 |
 | 4.0 | 0.2282 | 0.2345 | 0.9388 | 0.9227 | 0.8822 | 0.9671 |
 | 5.0 | 0.2126 | 0.2321 | 0.9388 | 0.9227 | 0.8822 | 0.9671 |
+
+</div>
 
 
 ## [CLS] pooling (the default)
@@ -115,6 +126,8 @@ Ben Schmidt’s embeddings were made with an older model (Word2vec) that is only
 
 [CLS] pooling is the method that Huggingface chose to code into their transformer library’s BertForSequenceClassification class. If you take a look at the forward function definition within the class, it simply runs tokenized text through the pre-trained BERT model and then [fetches the embedding vector of the first token](https://github.com/huggingface/transformers/blob/main/src/transformers/models/bert/modeling_bert.py#L1680){:target="_blank"} before passing it to the classifier network. Over 5 epochs (and 54 minutes of training on a T4 GPU) our [CLS] pooled model achieves a minimum validation loss of 0.2146 and a corresponding accuracy of 95.22%:
 
+<div class="overflow-table" markdown="1">
+
 | Epoch | Training Loss | Validation Loss | Accuracy | F1 | Precision | Recall |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | 1.0 | 0.5237 | 0.3170 | 0.9047 | 0.8842 | 0.8167 | 0.9638 |
@@ -122,6 +135,8 @@ Ben Schmidt’s embeddings were made with an older model (Word2vec) that is only
 | 3.0 | 0.2301 | 0.2242 | 0.9537 | 0.9402 | 0.9171 | 0.9645 |
 | 4.0 | 0.2071 | 0.2169 | 0.9517 | 0.9381 | 0.9091 | 0.9690 |
 | 5.0 | 0.1941 | 0.2146 | 0.9522 | 0.9388 | 0.9093 | 0.9703 |
+
+</div>
 
 ## Conclusions
 
