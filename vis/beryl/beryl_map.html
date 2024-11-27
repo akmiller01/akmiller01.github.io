@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hurricane Beryl Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/iso8601-js-period@0.2.1/iso8601.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-timedimension/dist/leaflet.timedimension.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-timedimension/dist/leaflet.timedimension.control.min.css">
+    <style>
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    // Function to pad dates
+    function padDigits(number, digits) {
+        return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+    };
+
+    // Date abbreviations
+    const dateAbbreviations = {
+        '01': 'Jan',
+        '02': 'Feb',
+        '03': 'Mar',
+        '04': 'Apr',
+        '05': 'May',
+        '06': 'Jun',
+        '07': 'Jul',
+        '08': 'Aug',
+        '09': 'Sep',
+        '10': 'Oct',
+        '11': 'Nov',
+        '12': 'Dec'
+    };
+
+    /**
+     * Creates a gradient function that maps values in a given domain to colors
+     * between two specified colors.
+     * 
+     * @param {string} color1 - The starting color in hexadecimal (e.g., "#ff0000").
+     * @param {string} color2 - The ending color in hexadecimal (e.g., "#0000ff").
+     * @param {number[]} domain - The range of values [min, max].
+     * @returns {function} - A function that takes a value and returns the interpolated color.
+     */
+    function createGradientFunction(color1, color2, domain) {
+        const [min, max] = domain;
+
+        // Converts a hex color to an RGB object
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.slice(1), 16);
+            return {
+                r: (bigint >> 16) & 255,
+                g: (bigint >> 8) & 255,
+                b: bigint & 255
+            };
+        }
+
+        // Converts an RGB object to a hex color
+        function rgbToHex({ r, g, b }) {
+            return `#${((1 << 24) + (r << 16) + (g << 8) + b)
+                .toString(16)
+                .slice(1)
+                .toUpperCase()}`;
+        }
+
+        // Linearly interpolates between two values
+        function interpolate(start, end, factor) {
+            return Math.round(start + (end - start) * factor);
+        }
+
+        // Create the gradient function
+        return function(value) {
+            if (value <= min) return color1;
+            if (value >= max) return color2;
+
+            const factor = (value - min) / (max - min);
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+
+            const interpolatedColor = {
+                r: interpolate(rgb1.r, rgb2.r, factor),
+                g: interpolate(rgb1.g, rgb2.g, factor),
+                b: interpolate(rgb1.b, rgb2.b, factor)
+            };
+
+            return rgbToHex(interpolatedColor);
+        };
+    }
+
+    const gradient = createGradientFunction("#ff0000", "#0000ff", [935, 1013]);
+
+
+    // Initialize map with time dimension enabled
+    const map = L.map('map', {
+        center: [18.2, -77.4], // Center on Jamaica
+        zoom: 4,
+        timeDimension: true,
+        timeDimensionControl: false
+    });
+    const timeControl = L.control.timeDimension({
+        loopButton: true,
+        timeSliderDragUpdate: true,
+        minSpeed: 5,
+        maxSpeed: 20,
+        speedStep: 1,
+        playerOptions: {
+            transitionTime: 200
+        }
+    }).addTo(map);
+
+    // Basemap
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+
+    // Add the GeoJSON layer to the map
+  var gridLayers = new L.GeoJSON.AJAX("jamaica_trigger_grid.geojson", {
+    style: function (feature) {
+      // Styling each polygon
+      return { color: "black", weight: 1, fillOpacity: 0.4 };
+    },
+    onEachFeature: function (feature, layer) {
+      // Add popups to display the ID
+    layer.bindPopup(`Polygon ID: ${feature.properties.id}</br>Min pressure: NA`);
+    }
+  }).addTo(map);
+
+
+    const hurricanePath = [];
+
+    const hurricaneLayer = L.geoJson(null, {
+        pointToLayer: (feature, latlng) => {
+            var pressure = feature.properties.pressure;
+            const date = feature.properties.formattedDate;
+            var radius = (1020 - pressure) / 2; // Radius inversely proportional to pressure
+            if(pressure === 0){
+                radius = 1;
+            }
+            return L.circleMarker(latlng, {
+                radius: radius,
+                color: 'black',
+                fillColor: gradient(pressure),
+                fillOpacity: 0.4
+            }).bindPopup(`Date: ${date}</br>Pressure: ${pressure} mb`);
+        }
+    });
+
+    const hurricaneData = new L.GeoJSON.AJAX("al022024_best_track_pts.geojson", {
+        middleware: data => {
+            data.features.forEach(point => {
+                const year = padDigits(point.properties.YEAR, 4);
+                const month = padDigits(point.properties.MONTH, 2);
+                const day = padDigits(point.properties.DAY, 2);
+                const hh = padDigits(point.properties.HHMM.substr(0, 2), 2);
+                const mm = padDigits(point.properties.HHMM.substr(2), 2);
+                const time = `${year}-${month}-${day}T${hh}:${mm}:00Z`;
+                const formattedDate = `${day} ${dateAbbreviations[month]}, ${year} ${hh}:${mm}`;
+                const pressure = point.properties.MSLP;
+                const pathData = {
+                    time: time, pressure: pressure, lat: point.geometry.coordinates[1], lng: point.geometry.coordinates[0]
+                };
+                hurricanePath.push(pathData);
+                hurricaneLayer.addData({
+                    type: "Feature",
+                    properties: {time: time, pressure: pressure, formattedDate: formattedDate},
+                    geometry: {type: "Point", coordinates: point.geometry.coordinates}
+                });
+            });
+        }
+    });
+
+    const timeDimensionLayer = L.timeDimension.layer.geoJson(hurricaneLayer, {
+        updateTimeDimension: true,
+        updateTimeDimensionMode: "replace"
+    });
+
+    timeDimensionLayer.addTo(map);
+
+    // Update grid colors dynamically
+    const updateGridColors = (currentData) => {
+        const pressure = currentData.pressure;
+        const lat = currentData.lat;
+        const lng = currentData.lng;
+        const point = L.latLng(lat, lng);
+        const color = gradient(pressure);
+        gridLayers.eachLayer( layer => {
+            if (layer.getBounds().contains(point)){
+                layer.setStyle({fillColor: color});
+                layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: ${pressure} mb`);
+            }
+        });
+    };
+
+    // Reset trigger boxes on first time period
+    const resetTriggerBoxes = () => {
+        gridLayers.eachLayer( layer => {
+            layer.setStyle({ fillColor: 'black'});
+            layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: NA`);
+        });
+    };
+
+    // Listen for time changes and update grid
+    map.timeDimension.on('timeload', function () {
+        const currentTime = map.timeDimension.getCurrentTime();
+        if(currentTime === 1719360000000){
+            resetTriggerBoxes();
+        }
+        const currentData = hurricanePath.find(p => new Date(p.time).getTime() === currentTime);
+        if (currentData) {
+            updateGridColors(currentData);
+        }
+    });
+</script>
+</body>
+</html>
