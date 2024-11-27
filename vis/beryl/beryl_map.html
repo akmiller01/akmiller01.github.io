@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hurricane Beryl Visualization</title>
     <script src="https://cdn.jsdelivr.net/npm/iso8601-js-period@0.2.1/iso8601.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-timedimension/dist/leaflet.timedimension.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-timedimension/dist/leaflet.timedimension.control.min.css">
     <style>
         #map {
@@ -21,7 +22,7 @@
 <div id="map"></div>
 <script>
     // Function to pad dates
-    function padDigits(number, digits) {
+    const padDigits = (number, digits) => {
         return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
     };
 
@@ -41,6 +42,33 @@
         '12': 'Dec'
     };
 
+    // TURF point in polygon
+    const isPointInsidePolygon = (polygonLayer, point) => {
+        // Convert Leaflet layer to GeoJSON
+        const polygonGeoJSON = polygonLayer.toGeoJSON();
+
+        // Create a Turf.js point GeoJSON from the Leaflet point
+        const pointGeoJSON = turf.point([point.lng, point.lat]);
+
+        // Use Turf.js to check if the point is inside the polygon
+        return turf.booleanPointInPolygon(pointGeoJSON, polygonGeoJSON);
+    }
+
+    // TURF line intersects polygon
+    const doesPolylineIntersectPolygon = (polygonLayer, polylineLayer) => {
+        var intersects = false;
+        // Convert Leaflet layers to GeoJSON
+        const polygonGeoJSON = polygonLayer.toGeoJSON();
+        const polylineGeoJSON = polylineLayer.toGeoJSON();
+        const polygons = turf.flatten(polygonGeoJSON).features;
+        for(const polygon of polygons){
+            intersects = intersects || turf.booleanCrosses(polylineGeoJSON, polygon);
+        };
+
+        // Use Turf.js to check if the polyline intersects the polygon
+        return intersects;
+    }
+
     /**
      * Creates a gradient function that maps values in a given domain to colors
      * between two specified colors.
@@ -50,11 +78,11 @@
      * @param {number[]} domain - The range of values [min, max].
      * @returns {function} - A function that takes a value and returns the interpolated color.
      */
-    function createGradientFunction(color1, color2, domain) {
+    const createGradientFunction = (color1, color2, domain, nullValue) => {
         const [min, max] = domain;
 
         // Converts a hex color to an RGB object
-        function hexToRgb(hex) {
+        const hexToRgb = (hex) => {
             const bigint = parseInt(hex.slice(1), 16);
             return {
                 r: (bigint >> 16) & 255,
@@ -64,7 +92,7 @@
         }
 
         // Converts an RGB object to a hex color
-        function rgbToHex({ r, g, b }) {
+        const rgbToHex = ({ r, g, b }) => {
             return `#${((1 << 24) + (r << 16) + (g << 8) + b)
                 .toString(16)
                 .slice(1)
@@ -72,12 +100,13 @@
         }
 
         // Linearly interpolates between two values
-        function interpolate(start, end, factor) {
+        const interpolate = (start, end, factor) => {
             return Math.round(start + (end - start) * factor);
         }
 
         // Create the gradient function
-        return function(value) {
+        return (value) => {
+            if (value == nullValue) return 'grey';
             if (value <= min) return color1;
             if (value >= max) return color2;
 
@@ -95,7 +124,7 @@
         };
     }
 
-    const gradient = createGradientFunction("#ff0000", "#0000ff", [935, 1013]);
+    const gradient = createGradientFunction("#ff0000", "#0000ff", [935, 1013], 0);
 
 
     // Initialize map with time dimension enabled
@@ -124,13 +153,15 @@
 
     // Add the GeoJSON layer to the map
   var gridLayers = new L.GeoJSON.AJAX("jamaica_trigger_grid.geojson", {
-    style: function (feature) {
+    style: (feature) => {
       // Styling each polygon
       return { color: "black", weight: 1, fillOpacity: 0.4 };
     },
-    onEachFeature: function (feature, layer) {
-      // Add popups to display the ID
-    layer.bindPopup(`Polygon ID: ${feature.properties.id}</br>Min pressure: NA`);
+    onEachFeature: (feature, layer) => {
+        // Add blank pressure
+        feature.properties.pressure = null;
+        // Add popups to display the ID
+        layer.bindPopup(`Polygon ID: ${feature.properties.id}</br>Min pressure: NA`);
     }
   }).addTo(map);
 
@@ -153,6 +184,13 @@
             }).bindPopup(`Date: ${date}</br>Pressure: ${pressure} mb`);
         }
     });
+
+    const hurricaneLines = L.geoJson(null,{
+        style: (feature) => {
+            return {color: gradient(feature.properties.pressure)}
+        }
+    });
+    hurricaneLines.addTo(map);
 
     const hurricaneData = new L.GeoJSON.AJAX("al022024_best_track_pts.geojson", {
         middleware: data => {
@@ -186,16 +224,49 @@
     timeDimensionLayer.addTo(map);
 
     // Update grid colors dynamically
-    const updateGridColors = (currentData) => {
+    const updateGridColors = (currentData, pastData) => {
         const pressure = currentData.pressure;
         const lat = currentData.lat;
         const lng = currentData.lng;
         const point = L.latLng(lat, lng);
         const color = gradient(pressure);
+        // Create lines and color overlapping grids
+        if(pastData){
+            var lineAlreadyExists = false;
+            hurricaneLines.eachLayer((layer) => {
+                lineAlreadyExists = lineAlreadyExists || (layer.feature.properties.id == pastData.time)
+            });
+            if(!lineAlreadyExists){
+                const meanPressure = (pastData.pressure + pressure) / 2;
+                const meanColor = gradient(meanPressure);
+                const tmpPolyLine = L.polyline([[lat, lng], [pastData.lat, pastData.lng]]);
+                gridLayers.eachLayer( layer => {
+                    if (doesPolylineIntersectPolygon(layer, tmpPolyLine)){
+                        if(layer.feature.properties.pressure === null || meanPressure < layer.feature.properties.pressure){
+                            layer.feature.properties.pressure = meanPressure;
+                            layer.setStyle({fillColor: meanColor});
+                            layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: ${layer.feature.properties.pressure} mb`);
+                        }
+                    }
+                });
+                hurricaneLines.addData({
+                    type: "Feature",
+                    properties: {id: pastData.time, pressure: meanPressure},
+                    geometry: {type: "LineString", coordinates: [
+                        [lng, lat],
+                        [pastData.lng, pastData.lat]
+                    ]}
+                });
+            }
+        }
+        // Color exact pip grids
         gridLayers.eachLayer( layer => {
-            if (layer.getBounds().contains(point)){
-                layer.setStyle({fillColor: color});
-                layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: ${pressure} mb`);
+            if (isPointInsidePolygon(layer, point)){
+                if(layer.feature.properties.pressure === null || pressure < layer.feature.properties.pressure){
+                    layer.feature.properties.pressure = pressure;
+                    layer.setStyle({fillColor: color});
+                    layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: ${pressure} mb`);
+                }
             }
         });
     };
@@ -203,20 +274,24 @@
     // Reset trigger boxes on first time period
     const resetTriggerBoxes = () => {
         gridLayers.eachLayer( layer => {
+            layer.feature.properties.pressure = null;
             layer.setStyle({ fillColor: 'black'});
             layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: NA`);
         });
+        hurricaneLines.clearLayers();
     };
 
     // Listen for time changes and update grid
-    map.timeDimension.on('timeload', function () {
+    map.timeDimension.on('timeload', () => {
+        const startTime = 1719360000000;
         const currentTime = map.timeDimension.getCurrentTime();
-        if(currentTime === 1719360000000){
+        if(currentTime === startTime){
             resetTriggerBoxes();
         }
         const currentData = hurricanePath.find(p => new Date(p.time).getTime() === currentTime);
+        const pastData = hurricanePath.find(p => new Date(p.time).getTime() === currentTime - 21600000);
         if (currentData) {
-            updateGridColors(currentData);
+            updateGridColors(currentData, pastData);
         }
     });
 </script>
