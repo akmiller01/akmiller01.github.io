@@ -164,7 +164,7 @@
         // Add blank pressure
         feature.properties.pressure = null;
         // Add popups to display the ID
-        layer.bindPopup(`Polygon ID: ${feature.properties.id}</br>Min pressure: NA`);
+        layer.bindPopup(`ID: ${feature.properties.id}</br>Trigger pressure: ${feature.properties.threshold} mb</br>Min pressure: NA`);
     }
   }).addTo(map);
 
@@ -248,7 +248,7 @@
                         if(layer.feature.properties.pressure === null || meanPressure < layer.feature.properties.pressure){
                             layer.feature.properties.pressure = meanPressure;
                             layer.setStyle({fillColor: meanColor});
-                            layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: ${layer.feature.properties.pressure} mb`);
+                            layer.bindPopup(`ID: ${layer.feature.properties.id}</br>Trigger pressure: ${layer.feature.properties.threshold} mb</br>Min pressure: ${layer.feature.properties.pressure} mb`);
                         }
                     }
                 });
@@ -268,7 +268,7 @@
                 if(layer.feature.properties.pressure === null || pressure < layer.feature.properties.pressure){
                     layer.feature.properties.pressure = pressure;
                     layer.setStyle({fillColor: color});
-                    layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: ${pressure} mb`);
+                    layer.bindPopup(`ID: ${layer.feature.properties.id}</br>Trigger pressure: ${layer.feature.properties.threshold} mb</br>Min pressure: ${pressure} mb`);
                 }
             }
         });
@@ -279,7 +279,7 @@
         gridLayers.eachLayer( layer => {
             layer.feature.properties.pressure = null;
             layer.setStyle({ fillColor: 'black'});
-            layer.bindPopup(`Polygon ID: ${layer.feature.properties.id}</br>Min pressure: NA`);
+            layer.bindPopup(`ID: ${layer.feature.properties.id}</br>Trigger pressure: ${layer.feature.properties.threshold} mb</br>Min pressure: NA`);
         });
         hurricaneLines.clearLayers();
     };
