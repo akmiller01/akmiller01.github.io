@@ -18,10 +18,9 @@
         stroke-width: 2px;
         }
 
-    .event-line {
-        stroke: #ff3c0f;
-        stroke-width: 3;
-        stroke-dasharray: 4;
+    .event-rect {
+        fill: #ff3c0f;
+        fill-opacity: 0.8;
     }
 
     .zoom {
@@ -216,17 +215,22 @@ d3.csv("data.csv", type).then(function(all_data) {
     x2.domain(x.domain());
     y2.domain(y.domain());
 
-    // Draw event lines
-    focus.selectAll(".event-line").remove();
-    focus.selectAll(".event-line")
+    // Draw event rectangles
+    focus.selectAll(".event-rect").remove();
+    focus.selectAll(".event-rect")
         .data(event_data)
-        .enter().append("line")
-        .attr("class", "event-line")
+        .enter().append("rect")
+        .attr("class", "event-rect")
         .attr("clip-path", "url(#clip)")
-        .attr("x1", d => x(d.date))
-        .attr("x2", d => x(d.date))
-        .attr("y1", 0)
-        .attr("y2", height)
+        .attr("x", d => x(d.date))
+        .attr("y", 0)
+        .attr("height", height)
+        .attr("width", (d) => {
+            var w_start = x(d.date),
+            w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+            rect_width = Math.max(w_end - w_start, 2);
+            return(rect_width);
+        })
         .on("mouseover", function(event, d) {
             tooltip.transition().duration(200).style("opacity", .9);
             tooltip.html(d.tooltip_html)
@@ -330,7 +334,13 @@ function brushed(event, d) {
   x.domain(s.map(x2.invert, x2));
   focus.select(".line").attr("d", line);
   svg.selectAll(".point").attr("cx", d => x(d.date)).attr("cy", d => y(d.value));
-  svg.selectAll(".event-line").attr("x1", d => x(d.date)).attr("x2", d => x(d.date));
+  svg.selectAll(".event-rect").attr("x", d => x(d.date))
+    .attr("width", (d) => {
+        var w_start = x(d.date),
+        w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+        rect_width = Math.max(w_end - w_start, 2);
+        return(rect_width);
+    });
   focus.select(".axis--x").call(xAxis);
   svg.select(".zoom").call(zoom.transform, d3.zoomIdentity
       .scale(width / (s[1] - s[0]))
@@ -343,7 +353,13 @@ function zoomed(event, d) {
   x.domain(t.rescaleX(x2).domain());
   focus.select(".line").attr("d", line);
   svg.selectAll(".point").attr("cx", d => x(d.date)).attr("cy", d => y(d.value));
-  svg.selectAll(".event-line").attr("x1", d => x(d.date)).attr("x2", d => x(d.date));
+  svg.selectAll(".event-rect").attr("x", d => x(d.date))
+    .attr("width", (d) => {
+        var w_start = x(d.date),
+        w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+        rect_width = Math.max(w_end - w_start, 2);
+        return(rect_width);
+    });
   focus.select(".axis--x").call(xAxis);
   context.select(".brush").call(brush.move, x.range().map(t.invertX, t));
 }
