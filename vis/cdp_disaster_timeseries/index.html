@@ -36,7 +36,6 @@
             background: lightsteelblue;
             border: 1px solid gray;
             border-radius: 5px;
-            pointer-events: none;
             white-space: preserve nowrap;
         }
 </style>
@@ -137,7 +136,17 @@ var context = svg.append("g")
     .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
 // Tooltip
-const tooltip = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("display", "none")
+    .on('mouseover', function(d, i) {
+        tooltip.transition().duration(0);  // on mouse over cancel mouse out transition
+        tooltip.style("display", "block");
+    })
+    .on('mouseout', function(d, i) {
+        tooltip.style("display", "none");  // on mouseout hide tip
+    });
 
 d3.csv("data.csv", type).then(function(all_data) {
   // Load initial data
@@ -232,13 +241,14 @@ d3.csv("data.csv", type).then(function(all_data) {
             return(rect_width);
         })
         .on("mouseover", function(event, d) {
-            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.transition().duration(0); // cancel any pending transition
+            tooltip.style("display", "block");
             tooltip.html(d.tooltip_html)
                 .style("left", (event.pageX + 5) + "px")
                 .style("top", (event.pageY - 28) + "px");
         })
         .on("mouseout", function() {
-            tooltip.transition().duration(500).style("opacity", 0);
+            tooltip.transition().delay(500).style("display", "none");
         });
     // Draw focus line
     var line = d3.line()
@@ -261,13 +271,13 @@ d3.csv("data.csv", type).then(function(all_data) {
         .attr("cy", d => y(d.value))
         .attr("r", 4)
         .on("mouseover", function(event, d) {
-            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.transition().duration(200).style("display", "block");
             tooltip.html(d.tooltip_html)
                 .style("left", (event.pageX + 5) + "px")
                 .style("top", (event.pageY - 28) + "px");
         })
         .on("mouseout", function() {
-            tooltip.transition().duration(500).style("opacity", 0);
+            tooltip.transition().duration(500).style("display", "none");
         });
 
     // Draw focus axes
