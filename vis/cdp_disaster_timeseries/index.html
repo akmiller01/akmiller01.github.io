@@ -312,9 +312,6 @@ d3.csv("data.csv", type).then(function(all_data) {
         // }
     }
 
-    let previousIndicatorSelections = Array.from(d3.select("#indicator").node().selectedOptions).map(option => option.value);
-    let previousDisasterSelections = Array.from(d3.select("#disaster").node().selectedOptions).map(option => option.value);
-
     function updateDropdowns() {
         d3.select("#country").property('value', selectedCountry);
 
@@ -336,6 +333,9 @@ d3.csv("data.csv", type).then(function(all_data) {
             .property("selected", d => selectedDisasters.includes(d))
             .text(d => d);
     };
+    updateDropdowns();
+    let previousIndicatorSelections = Array.from(d3.select("#indicator").node().selectedOptions).map(option => option.value);
+    let previousDisasterSelections = Array.from(d3.select("#disaster").node().selectedOptions).map(option => option.value);
 
     function drawChart() {
         setUrlParam('c', selectedCountry);
@@ -557,7 +557,6 @@ d3.csv("data.csv", type).then(function(all_data) {
 
     // Initialize
     drawChart();
-    updateDropdowns();
 });
 
 function brushed(event, d) {
