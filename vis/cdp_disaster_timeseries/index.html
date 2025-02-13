@@ -2,9 +2,6 @@
 <head>
 <meta charset="utf-8">
 <style>
-    .area {
-        clip-path: url(#clip);
-    }
     .point {
         stroke: white;
         stroke-width: 1.5;
@@ -38,42 +35,28 @@
         border-radius: 5px;
         white-space: preserve nowrap;
     }
-    .indicator-legend, .disaster-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-    }
-
-    .legend-color {
-        width: 15px;
-        height: 15px;
-        margin-right: 5px;
-        border: 1px solid #000;
+    select {
+        resize: both;
     }
 </style>
+<link rel="stylesheet" href="loading.css">
 </head>
 <body>
+<div class="loader" id="loader"></div>
 <label for="country">Country:</label>
 <select id="country"></select>
-<div class="indicator-legend">
+<div>
     <label for="indicator">Indicator:</label>
     <select multiple id="indicator"></select>
 </div>
-<div class="disaster-legend">
+<div>
     <label for="disaster">Disasters:</label>
     <select multiple id="disaster"></select>
 </div>
-<div id="chart">
-    <svg width="960" height="500"></svg>
+<div id="timeline">
+    <svg width="960" height="100"></svg>
 </div>
+<div id="chart"></div>
 </body>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
@@ -108,19 +91,22 @@ function splitLineSegments(data) {
     const segments = [];
 
     for (let i = 1; i < data.length; i++) {
-        let segment = {'data':[data[i - 1], data[i]], 'dashed': false}
         const currentDate = data[i].date;
         const previousDate = data[i - 1].date;
+        const currentValue = data[i].value;
+        const previousValue = data[i - 1].value;
         const currentIndicator = data[i].indicator_type_name;
         const previousIndicator = data[i - 1].indicator_type_name;
-        const diff = currentDate - previousDate;
-        segment['indicator'] = currentIndicator;
 
-        if (diff > 366 * 24 * 60 * 60 * 1000) { // More than a year
-            segment['dashed'] = true
-        }
-        if(currentIndicator === previousIndicator){ // Don't connect different indicators
-            segments.push(segment);
+        if (currentIndicator === previousIndicator) { // Only connect same indicators
+            segments.push({
+                x1: previousDate,
+                x2: currentDate,
+                y1: previousValue,
+                y2: currentValue,
+                dashed: (currentDate - previousDate) > 366 * 24 * 60 * 60 * 1000, // More than a year
+                indicator: currentIndicator
+            });
         }
     }
 
@@ -128,12 +114,10 @@ function splitLineSegments(data) {
 };
 
 
-var svg = d3.select("svg"),
-    margin = {top: 20, right: 20, bottom: 110, left: 100},
-    margin2 = {top: 430, right: 20, bottom: 30, left: 100},
-    width = +svg.attr("width") - margin.left - margin.right,
-    height = +svg.attr("height") - margin.top - margin.bottom,
-    height2 = +svg.attr("height") - margin2.top - margin2.bottom;
+var margin = {top: 20, right: 20, bottom: 40, left: 100},
+    width = 960 - margin.left - margin.right,
+    height = 450 - margin.top - margin.bottom,
+    height2 = 100 - margin.top - margin.bottom;
 
 var parseDate = d3.timeParse("%Y-%m-%d");
 
@@ -222,10 +206,6 @@ var xAxis = d3.axisBottom(x),
     xAxis2 = d3.axisBottom(x2),
     yAxis = d3.axisLeft(y);
 
-var line = d3.line()
-    .x(d => x(d.date))
-    .y(d => y(d.value));
-
 var area2 = d3.area()
     .curve(d3.curveMonotoneX)
     .x(function(d) { return x2(d.date); })
@@ -242,27 +222,11 @@ var zoom = d3.zoom()
     .extent([[0, 0], [width, height]])
     .on("zoom", zoomed);
 
-svg.append("defs").append("clipPath")
-    .attr("id", "clip")
-  .append("rect")
-    .attr("width", width)
-    .attr("height", height);
+var timelineSVG = d3.select("#timeline svg");
 
-    // Draw zoom area
-svg.append("rect")
-    .attr("class", "zoom")
-    .attr("width", width)
-    .attr("height", height)
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-    .call(zoom);
-
-var focus = svg.append("g")
-    .attr("class", "focus")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-
-var context = svg.append("g")
+var context = timelineSVG.append("g")
     .attr("class", "context")
-    .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+    .attr("transform", "translate(" + margin.left + ", " + margin.top +")");
 
 // Tooltip
 const tooltip = d3.select("body")
@@ -277,7 +241,8 @@ const tooltip = d3.select("body")
         tooltip.style("display", "none");  // on mouseout hide tip
     });
 
-d3.csv("data_20250128.csv", type).then(function(all_data) {
+d3.csv("data.csv", type).then(function(all_data) {
+    document.getElementById('loader').style.display = "none";
 
     // Load initial data
     const countries = [...new Set(all_data.map(d => d.country_name))].filter(d => d !== "").sort();
@@ -296,7 +261,7 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
     let indicator_types = [...new Set(all_country_data.map(d => d.indicator_type_name))].filter(d => d !== "").sort();
     let selectedIndicators = [indicator_types[0]];
     if(getUrlParam('i') !== null){
-        selectedIndicators = getUrlParam('i').split(",");
+        selectedIndicators = getUrlParam('i').split("|");
         selectedIndicators = selectedIndicators.filter(indicator => indicator_types.includes(indicator));
         // if (selectedIndicators.length === 0 && indicator_types.length > 0) {
         //     selectedIndicators = [indicator_types[0]];
@@ -305,7 +270,7 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
     let disaster_types = [...new Set(all_country_data.map(d => d.disaster_types_name))].filter(d => d !== "").sort();
     let selectedDisasters = [disaster_types[0]];
     if(getUrlParam('d') !== null){
-        selectedDisasters = getUrlParam('d').split(",");
+        selectedDisasters = getUrlParam('d').split("|");
         selectedDisasters = selectedDisasters.filter(disaster => disaster_types.includes(disaster));
         // if (selectedDisasters.length === 0 && disaster_types.length > 0) {
         //     selectedDisasters = [disaster_types[0]];
@@ -343,137 +308,43 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
         country_data = all_data.filter((d) => d.country_name==selectedCountry & (selectedIndicators.includes(d.indicator_type_name) | selectedDisasters.includes(d.disaster_types_name)));
         indicator_types = [...new Set(country_data.map(d => d.indicator_type_name))].filter(d => d !== "").sort();
         selectedIndicators = selectedIndicators.filter(indicator => indicator_types.includes(indicator));
-        setUrlParam('i', selectedIndicators.join(","));
         disaster_types = [...new Set(country_data.map(d => d.disaster_types_name))].filter(d => d !== "").sort();
         selectedDisasters = selectedDisasters.filter(disaster => disaster_types.includes(disaster));
-        setUrlParam('d', selectedDisasters.join(","));
 
         data = country_data.filter((d) => selectedIndicators.includes(d.indicator_type_name));
         event_data = country_data.filter((d) => selectedDisasters.includes(d.disaster_types_name));
 
-        // Draw legends
-        const indicatorLegend = d3.select(".indicator-legend");
-        indicatorLegend.selectAll(".legend-item").remove();
+        // Remove old charts
+        d3.select("#chart").selectAll("svg").remove();
 
-        selectedIndicators.forEach((key, i) => {
-            const legendItem = indicatorLegend
-                .append("div")
-                .attr("class", "legend-item")
-                .attr("title", "Click to remove")
-                .on("click", () => {selectedIndicators = selectedIndicators.filter(d => d != key); updateDropdowns(); drawChart();});
-            legendItem
-                .append("div")
-                .attr("class", "legend-color")
-                .style("background-color", indicator_color(key));
-            legendItem
-                .append("span")
-                .text(key);
-        });
-        const disasterLegend = d3.select(".disaster-legend");
-        disasterLegend.selectAll(".legend-item").remove();
-
-        selectedDisasters.forEach((key, i) => {
-            const legendItem = disasterLegend
-                .append("div")
-                .attr("class", "legend-item")
-                .attr("title", "Click to remove")
-                .on("click", () => {selectedDisasters = selectedDisasters.filter(d => d != key); updateDropdowns(); drawChart();});
-            legendItem
-                .append("div")
-                .attr("class", "legend-color")
-                .style("background-color", disaster_color(key));
-            legendItem
-                .append("span")
-                .text(key);
-        });
-
-        // Set domains
-        var xExtent = d3.extent(country_data, function(d) { return d.date; }),
-        xRange = Date.parse(xExtent[1]) - Date.parse(xExtent[0]);
+        // Calculate combined date extent
+        let allDates = [];
+        country_data.forEach(d => allDates.push(d.date));
+        var xExtent = d3.extent(allDates);
+        var xRange = Date.parse(xExtent[1]) - Date.parse(xExtent[0]);
         x.domain([Date.parse(xExtent[0]) - (xRange * .01), Date.parse(xExtent[1]) + (xRange * .01)]);
-        var yMax =  d3.max(data, function(d) { return d.value; });
-        y.domain([0, yMax * 1.05]);
         x2.domain(x.domain());
 
-        // Draw event rectangles
-        focus.selectAll(".event-rect").remove();
-        focus.selectAll(".event-rect")
-            .data(event_data)
-            .enter().append("rect")
-            .attr("class", "event-rect")
-            .attr("clip-path", "url(#clip)")
-            .attr("x", d => x(d.date))
-            .attr("y", 0)
-            .attr("height", height)
-            .attr("width", (d) => {
-                var w_start = x(d.date),
-                w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
-                rect_width = Math.max(w_end - w_start, 2);
-                return(rect_width);
-            })
-            .attr("fill", d => disaster_color(d.disaster_types_name))
-            .on("mouseover", function(event, d) {
-                tooltip.transition().duration(0); // cancel any pending transition
-                tooltip.style("display", "block");
-                tooltip.html(d.tooltip_html)
-                    .style("left", (event.pageX + 15) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition().delay(500).style("display", "none");
-            });
-        // Draw focus line segments
-        const line_segments = splitLineSegments(data);
-        var line = d3.line()
-            .x(d => x(d.date))
-            .y(d => y(d.value));
-        focus.selectAll('.line').remove();
-        line_segments.forEach(segment => {
-            focus.append("path")
-            .datum(segment.data)
-            .attr("class", segment.dashed ? "line dashed" : "line")
-            .attr("stroke", indicator_color(segment.indicator))
-            .attr("clip-path", "url(#clip)")
-            .attr("d", line);
+        // Create a chart for each selected indicator
+        selectedIndicators.forEach((indicator, index) => {
+            const indicatorData = country_data.filter(d => d.indicator_type_name === indicator);
+            const uniqueID = "indicator" + index;
+            createChart(indicator, indicatorData, indicator_color(indicator), uniqueID);
         });
-        //Draw mouseover points
-        focus.selectAll(".point").remove();
-        focus.selectAll(".point")
-            .data(data)
-            .enter().append("circle")
-            .attr("class", "point")
-            .attr("clip-path", "url(#clip)")
-            .attr("cx", d => x(d.date))
-            .attr("cy", d => y(d.value))
-            .attr("r", 4)
-            .attr("fill", d => indicator_color(d.indicator_type_name))
-            .on("mouseover", function(event, d) {
-                tooltip.transition().duration(200).style("display", "block");
-                tooltip.html(d.tooltip_html)
-                    .style("left", (event.pageX + 15) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition().duration(500).style("display", "none");
-            });
 
-        // Draw focus axes
-        focus.selectAll(".axis").remove();
-        focus.append("g")
-            .attr("class", "axis axis--x")
-            .attr("transform", "translate(0," + height + ")")
-            .call(xAxis);
-        focus.append("g")
-            .attr("class", "axis axis--y")
-            .call(yAxis);
+        // Create a chart for each selected disaster
+        selectedDisasters.forEach((disaster, index, arr) => {
+            const disasterData = country_data.filter(d => d.disaster_types_name === disaster);
+            const isLast = index === arr.length - 1;
+            const uniqueID = "disaster" + index;
+            createChart(disaster, disasterData, disaster_color(disaster), uniqueID, true, isLast);
+        });
 
-        // Draw context area
-        const dateSortedData = data.sort((a, b) => {return (a.date < b.date) ? -1 : (a.date > b.date) ? 1 : 0;});
+         // Draw context area
+         const dateSortedData = data.sort((a, b) => {return (a.date < b.date) ? -1 : (a.date > b.date) ? 1 : 0;});
         const groupedData = d3.group(dateSortedData, d => d.date);
-
         // Extract keys (indicators)
         const keys = Array.from(new Set(dateSortedData.map(d => d.indicator_type_name)));
-
         // Transform grouped data into wide form
         const transformedData = Array.from(groupedData, ([date, records]) => {
             const entry = { date };
@@ -488,13 +359,11 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
             return entry;
         });
         
-
         // Stacking the data
         const stack = d3.stack()
             .keys(keys)
             .order(d3.stackOrderNone)  // Default order
             .offset(d3.stackOffsetNone);  // Default offset
-
         const stackedData = stack(transformedData);
         if(stackedData.length > 0){
             y2.domain([0, d3.max(stackedData[stackedData.length - 1], d => d[1])]);
@@ -512,7 +381,7 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
                 .attr("fill", d => indicator_color(d.key));
         context.selectAll(".axis").remove();
         context.append("g")
-            .attr("class", "axis axis--x")
+            .attr("class", "axis axis--x2")
             .attr("transform", "translate(0," + height2 + ")")
             .call(xAxis2);
         context.selectAll(".brush").remove();
@@ -521,6 +390,136 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
             .call(brush)
             .call(brush.move, x.range());
     };
+
+    function createChart(title, data, color, uniqueID, isDisaster = false, isLast = false) {
+        // Create a new SVG element
+        let chartHeight = height + margin.top + margin.bottom;
+        let axisHeight = height;
+        if (isDisaster) {
+            chartHeight = (height2 + margin.top + margin.bottom);
+            axisHeight = height2;
+        }
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", chartHeight);
+
+        svg.append("defs").append("clipPath")
+            .attr("id", "clip-" + uniqueID)
+            .append("rect")
+            .attr("width", width)
+            .attr("height", chartHeight - margin.bottom);
+
+        // Draw zoom area
+        svg.append("rect")
+            .attr("class", "zoom")
+            .attr("width", width)
+            .attr("height", chartHeight)
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+            .call(zoom);
+
+        const focus = svg.append("g")
+            .attr("class", "focus")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Set domains
+        var yMax =  d3.max(data, function(d) { return d.value; });
+        y.domain([0, yMax * 1.05]);
+
+        // Draw event rectangles (only for disaster charts)
+        if (isDisaster) {
+            focus.selectAll(".event-rect")
+                .data(data)
+                .enter().append("rect")
+                .attr("class", "event-rect")
+                .attr("clip-path", "url(#clip-" + uniqueID +")")
+                .attr("x", d => x(d.date))
+                .attr("y", 0)
+                .attr("height", chartHeight)
+                .attr("width", (d) => {
+                    var w_start = x(d.date),
+                    w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+                    rect_width = Math.max(w_end - w_start, 2);
+                    return(rect_width);
+                })
+                .attr("fill", color)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition().duration(0); // cancel any pending transition
+                    tooltip.style("display", "block");
+                    tooltip.html(d.tooltip_html)
+                        .style("left", (event.pageX + 15) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition().delay(500).style("display", "none");
+                });
+            if (isLast){
+                // Draw focus axes
+                focus.append("g")
+                .attr("class", "axis axis--x")
+                .attr("transform", "translate(0," + (axisHeight + margin.top) + ")")
+                .call(xAxis.scale(x));
+            }
+            
+        } else {
+            // Draw focus line segments
+            const line_segments = splitLineSegments(data);
+            line_segments.forEach(segment => {
+                focus.append("line")
+                .datum(segment)
+                .attr("class", segment.dashed ? "line dashed" : "line")
+                .attr("stroke", color)
+                .attr("clip-path", "url(#clip-" + uniqueID +")")
+                .attr("x1", d => x(d.x1))
+                .attr("x2", d => x(d.x2))
+                .attr("y1", d => y(d.y1))
+                .attr("y2", d => y(d.y2));
+            });
+            //Draw mouseover points
+            focus.selectAll(".point")
+                .data(data)
+                .enter().append("circle")
+                .attr("class", "point")
+                .attr("clip-path", "url(#clip-" + uniqueID +")")
+                .attr("cx", d => x(d.date))
+                .attr("cy", d => y(d.value))
+                .attr("r", 4)
+                .attr("fill", color)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition().duration(200).style("display", "block");
+                    tooltip.html(d.tooltip_html)
+                        .style("left", (event.pageX + 15) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition().duration(500).style("display", "none");
+                });
+            // Draw focus axes
+            focus.append("g")
+                .attr("class", "axis axis--x")
+                .attr("transform", "translate(0," + axisHeight + ")")
+                .call(xAxis.scale(x));
+            focus.append("g")
+                .attr("class", "axis axis--y")
+                .call(yAxis);
+        }
+
+        // Add title
+        svg.append("rect")
+            .attr("x", margin.left - 20)
+            .attr("y", 0)
+            .attr("width", 12)
+            .attr("height", 12)
+            .attr("fill", color)
+            .attr("stroke", "black")
+            .attr("stroke-width", 1);
+        svg.append("text")
+            .attr("x", margin.left)
+            .attr("y", (margin.top / 2) + 2)
+            .attr("text-anchor", "left")
+            .style("font-size", "16px")
+            .text(title);
+    }
 
     // Update chart based on dropdown selection
     d3.select("#country").on("change", function() {
@@ -537,6 +536,7 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
         const removed = previousIndicatorSelections.filter(value => !currentSelection.includes(value));
         selectedIndicators = selectedIndicators.concat(added);
         selectedIndicators = selectedIndicators.filter(d => !removed.includes(d))
+        setUrlParam('i', selectedIndicators.join("|"));
         // Update the previous selection
         previousIndicatorSelections = currentSelection;
         drawChart();
@@ -549,12 +549,12 @@ d3.csv("data_20250128.csv", type).then(function(all_data) {
         const removed = previousDisasterSelections.filter(value => !currentSelection.includes(value));
         selectedDisasters = selectedDisasters.concat(added);
         selectedDisasters = selectedDisasters.filter(d => !removed.includes(d))
+        setUrlParam('d', selectedDisasters.join("|"));
         // Update the previous selection
         previousDisasterSelections = currentSelection;
         drawChart();
     });
     
-
     // Initialize
     drawChart();
 });
@@ -563,39 +563,43 @@ function brushed(event, d) {
     if (event.sourceEvent === undefined) return; // ignore brush-by-zoom
     var s = event.selection || x2.range();
     x.domain(s.map(x2.invert, x2));
-    focus.selectAll(".line").attr("d", line);
-    svg.selectAll(".point").attr("cx", d => x(d.date)).attr("cy", d => y(d.value));
-    svg.selectAll(".event-rect").attr("x", d => x(d.date))
+    d3.selectAll(".focus .line").attr("x1", d => x(d.x1)).attr("x2", d => x(d.x2));
+    d3.selectAll(".point").attr("cx", d => x(d.date));
+    d3.selectAll(".event-rect").attr("x", d => x(d.date))
         .attr("width", (d) => {
             var w_start = x(d.date),
             w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
             rect_width = Math.max(w_end - w_start, 2);
             return(rect_width);
         });
-    focus.select(".axis--x").call(xAxis);
-    svg.select(".zoom").call(zoom.transform, d3.zoomIdentity
-        .scale(width / (s[1] - s[0]))
-        .translate(-s[0], 0));
+    d3.selectAll(".axis--x").call(xAxis);
 }
 
 function zoomed(event, d) {
     if (event.sourceEvent === undefined) return; // ignore zoom-by-brush
     var t = event.transform;
     x.domain(t.rescaleX(x2).domain());
-    focus.selectAll(".line").attr("d", line);
-    svg.selectAll(".point").attr("cx", d => x(d.date)).attr("cy", d => y(d.value));
-    svg.selectAll(".event-rect").attr("x", d => x(d.date))
+    d3.selectAll(".focus .line").attr("x1", d => x(d.x1)).attr("x2", d => x(d.x2));
+    d3.selectAll(".point").attr("cx", d => x(d.date));
+    d3.selectAll(".event-rect").attr("x", d => x(d.date))
         .attr("width", (d) => {
             var w_start = x(d.date),
             w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
             rect_width = Math.max(w_end - w_start, 2);
             return(rect_width);
         });
-    focus.select(".axis--x").call(xAxis);
+    d3.selectAll(".axis--x").call(xAxis);
     context.select(".brush").call(brush.move, x.range().map(t.invertX, t));
-    }
+}
 
-    function type(d) {
+function type(d) {
+    d.date = parseDate(d.date);
+    d.value = parseFloat(d.value);
+    return d;
+}
+
+
+function type(d) {
     d.date = parseDate(d.date);
     d.value = parseFloat(d.value);
     return d;

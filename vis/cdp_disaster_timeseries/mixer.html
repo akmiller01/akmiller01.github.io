@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<style>
+    .area {
+        clip-path: url(#clip);
+    }
+    .point {
+        stroke: white;
+        stroke-width: 1.5;
+    }
+
+    .line {
+        fill: none;
+        stroke-width: 2px;
+    }
+
+    .dashed {
+        stroke-dasharray: 5, 5;
+    }
+
+    .event-rect {
+        fill-opacity: 0.8;
+    }
+
+    .zoom {
+        cursor: move;
+        fill: none;
+        pointer-events: all;
+    }
+
+    .tooltip {
+        position: absolute;
+        text-align: left;
+        padding: 5px;
+        background: lightsteelblue;
+        border: 1px solid gray;
+        border-radius: 5px;
+        white-space: preserve nowrap;
+    }
+    .indicator-legend, .disaster-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .legend-color {
+        width: 15px;
+        height: 15px;
+        margin-right: 5px;
+        border: 1px solid #000;
+    }
+</style>
+</head>
+<body>
+<label for="country">Country:</label>
+<select id="country"></select>
+<div class="indicator-legend">
+    <label for="indicator">Indicator:</label>
+    <select multiple id="indicator"></select>
+</div>
+<div class="disaster-legend">
+    <label for="disaster">Disasters:</label>
+    <select multiple id="disaster"></select>
+</div>
+<div id="chart">
+    <svg width="960" height="500"></svg>
+</div>
+</body>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+
+function setUrlParam(key, value){
+    // Get the current URLSearchParams object
+    const queryParams = new URLSearchParams(window.location.search);
+
+    // Set a new parameter or modify an existing one
+    queryParams.set(key, value);
+
+    // Construct the new URL
+    const newUrl = window.location.pathname + '?' + queryParams.toString();
+
+    // Update the URL in the browser history without reloading the page
+    history.replaceState(null, null, newUrl);
+}
+
+function getUrlParam(key){
+    // Get the current URLSearchParams object
+    const queryParams = new URLSearchParams(window.location.search);
+    return(queryParams.get(key))
+}
+
+
+function splitLineSegments(data) {
+    data = data.sort(function(a, b) {
+        var textA = a.indicator_type_name.toUpperCase();
+        var textB = b.indicator_type_name.toUpperCase();
+        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+    });
+    const segments = [];
+
+    for (let i = 1; i < data.length; i++) {
+        let segment = {'data':[data[i - 1], data[i]], 'dashed': false}
+        const currentDate = data[i].date;
+        const previousDate = data[i - 1].date;
+        const currentIndicator = data[i].indicator_type_name;
+        const previousIndicator = data[i - 1].indicator_type_name;
+        const diff = currentDate - previousDate;
+        segment['indicator'] = currentIndicator;
+
+        if (diff > 366 * 24 * 60 * 60 * 1000) { // More than a year
+            segment['dashed'] = true
+        }
+        if(currentIndicator === previousIndicator){ // Don't connect different indicators
+            segments.push(segment);
+        }
+    }
+
+    return segments;
+};
+
+
+var svg = d3.select("svg"),
+    margin = {top: 20, right: 20, bottom: 110, left: 100},
+    margin2 = {top: 430, right: 20, bottom: 30, left: 100},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom,
+    height2 = +svg.attr("height") - margin2.top - margin2.bottom;
+
+var parseDate = d3.timeParse("%Y-%m-%d");
+
+var x = d3.scaleTime().range([0, width]),
+    x2 = d3.scaleTime().range([0, width]),
+    y = d3.scaleLinear().range([height, 0]),
+    y2 = d3.scaleLinear().range([height2, 0]);
+
+var indicator_color_scale = d3.scaleOrdinal().domain(
+    [
+        "Total population",
+        "Exports",
+        "GNI",
+        "Imports",
+        "Food exports",
+        "Food imports",
+        "Humanitarian assistance funded",
+        "Humanitarian assistance required",
+        "Displacement",
+        "Agricultural production"
+    ]
+).range(
+    [
+        "#4B0082", // Total population (indigo, neutral and broad)
+        "#1E90FF", // Exports (bright blue, positive flow)
+        "#4682B4", // GNI (muted blue, economic data)
+        "#87CEEB", // Imports (lighter blue, complement to exports)
+        "#32CD32", // Food exports (vivid green, agriculture and positivity)
+        "#90EE90", // Food imports (light green, related but less intense)
+        "#FFD700", // Humanitarian assistance funded (gold, achievement and funding)
+        "#FFA500", // Humanitarian assistance required (orange, urgency and need)
+        "#FF4500", // Displacement (red-orange, highlighting severity)
+        "#228B22"  // Agricultural production (forest green, robust and natural)
+    ]
+);
+
+function indicator_color(value) {
+    let value_trunc = value;
+    if(value.endsWith(" per capita")){
+        value_trunc = value.slice(0, -11);
+    }
+    return(indicator_color_scale(value_trunc));
+};
+
+var disaster_color = d3.scaleOrdinal().domain(
+    [
+        "Cyclone",
+        "Flood",
+        "Earthquake",
+        "Extreme temperature",
+        "Tornado/severe storm",
+        "Landslide",
+        "Epidemic/pandemic/disease outbreak",
+        "Fire",
+        "Drought",
+        "Extreme cold",
+        "Snow avalanche",
+        "Conflict",
+        "Insect infestation",
+        "Tsunami",
+        "Extreme heat",
+        "Volcano eruption"
+    ]
+).range(
+    [
+        "#1E90FF", // Cyclone (bright blue, representing water and storms)
+        "#4682B4", // Flood (muted blue, water-related but less intense)
+        "#FF6347", // Earthquake (red-orange, representing destruction and urgency)
+        "#FFD700", // Extreme temperature (gold, extreme and impactful heat/cold)
+        "#00BFFF", // Tornado/severe storm (sky blue, related to atmospheric phenomena)
+        "#A0522D", // Landslide (brown, representing earth and soil)
+        "#FF4500", // Epidemic/pandemic/disease outbreak (bright red, urgency and health)
+        "#DC143C", // Fire (crimson red, fiery and destructive)
+        "#F4A460", // Drought (sandy brown, dryness and scarcity)
+        "#ADD8E6", // Extreme cold (light blue, icy and cold)
+        "#B0E0E6", // Snow avalanche (pale blue, snow and ice)
+        "#800000", // Conflict (maroon, representing severity and tension)
+        "#9ACD32", // Insect infestation (lime green, nature and pest-related)
+        "#4169E1", // Tsunami (royal blue, oceanic and powerful)
+        "#FF8C00", // Extreme heat (deep orange, representing scorching temperatures)
+        "#8B0000"  // Volcano eruption (dark red, molten lava and eruption)
+    ]
+);
+
+var xAxis = d3.axisBottom(x),
+    xAxis2 = d3.axisBottom(x2),
+    yAxis = d3.axisLeft(y);
+
+var line = d3.line()
+    .x(d => x(d.date))
+    .y(d => y(d.value));
+
+var area2 = d3.area()
+    .curve(d3.curveMonotoneX)
+    .x(function(d) { return x2(d.date); })
+    .y0(height2)
+    .y1(function(d) { return y2(d.value); });
+
+var brush = d3.brushX()
+    .extent([[0, 0], [width, height2]])
+    .on("brush end", brushed);
+
+var zoom = d3.zoom()
+    .scaleExtent([1, Infinity])
+    .translateExtent([[0, 0], [width, height]])
+    .extent([[0, 0], [width, height]])
+    .on("zoom", zoomed);
+
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+  .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+
+    // Draw zoom area
+svg.append("rect")
+    .attr("class", "zoom")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    .call(zoom);
+
+var focus = svg.append("g")
+    .attr("class", "focus")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+var context = svg.append("g")
+    .attr("class", "context")
+    .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+
+// Tooltip
+const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("display", "none")
+    .on('mouseover', function(d, i) {
+        tooltip.transition().duration(0);  // on mouse over cancel mouse out transition
+        tooltip.style("display", "block");
+    })
+    .on('mouseout', function(d, i) {
+        tooltip.style("display", "none");  // on mouseout hide tip
+    });
+
+d3.csv("data.csv", type).then(function(all_data) {
+
+    // Load initial data
+    const countries = [...new Set(all_data.map(d => d.country_name))].filter(d => d !== "").sort();
+    let selectedCountry = countries[0];
+    if(getUrlParam('c') !== null){
+        selectedCountry = getUrlParam('c');
+    }
+
+    d3.selectAll("#country").selectAll("option")
+        .data(countries)
+        .join("option")
+        .attr("value", d => d)
+        .text(d => d);
+
+    let all_country_data = all_data.filter((d) => d.country_name==selectedCountry);
+    let indicator_types = [...new Set(all_country_data.map(d => d.indicator_type_name))].filter(d => d !== "").sort();
+    let selectedIndicators = [indicator_types[0]];
+    if(getUrlParam('i') !== null){
+        selectedIndicators = getUrlParam('i').split("|");
+        selectedIndicators = selectedIndicators.filter(indicator => indicator_types.includes(indicator));
+        // if (selectedIndicators.length === 0 && indicator_types.length > 0) {
+        //     selectedIndicators = [indicator_types[0]];
+        // }
+    }
+    let disaster_types = [...new Set(all_country_data.map(d => d.disaster_types_name))].filter(d => d !== "").sort();
+    let selectedDisasters = [disaster_types[0]];
+    if(getUrlParam('d') !== null){
+        selectedDisasters = getUrlParam('d').split("|");
+        selectedDisasters = selectedDisasters.filter(disaster => disaster_types.includes(disaster));
+        // if (selectedDisasters.length === 0 && disaster_types.length > 0) {
+        //     selectedDisasters = [disaster_types[0]];
+        // }
+    }
+
+    function updateDropdowns() {
+        d3.select("#country").property('value', selectedCountry);
+
+        all_country_data = all_data.filter((d) => d.country_name==selectedCountry)
+        indicator_types = [...new Set(all_country_data.map(d => d.indicator_type_name))].filter(d => d !== "").sort();
+        disaster_types = [...new Set(all_country_data.map(d => d.disaster_types_name))].filter(d => d !== "").sort();
+
+        d3.select("#indicator").selectAll("option")
+            .data(indicator_types)
+            .join("option")
+            .attr("value", d => d)
+            .property("selected", d => selectedIndicators.includes(d))
+            .text(d => d);
+
+        d3.select("#disaster").selectAll("option")
+            .data(disaster_types)
+            .join("option")
+            .attr("value", d => d)
+            .property("selected", d => selectedDisasters.includes(d))
+            .text(d => d);
+    };
+    updateDropdowns();
+    let previousIndicatorSelections = Array.from(d3.select("#indicator").node().selectedOptions).map(option => option.value);
+    let previousDisasterSelections = Array.from(d3.select("#disaster").node().selectedOptions).map(option => option.value);
+
+    function drawChart() {
+        setUrlParam('c', selectedCountry);
+        d3.select("#country").property('value', selectedCountry);
+        country_data = all_data.filter((d) => d.country_name==selectedCountry & (selectedIndicators.includes(d.indicator_type_name) | selectedDisasters.includes(d.disaster_types_name)));
+        indicator_types = [...new Set(country_data.map(d => d.indicator_type_name))].filter(d => d !== "").sort();
+        selectedIndicators = selectedIndicators.filter(indicator => indicator_types.includes(indicator));
+        setUrlParam('i', selectedIndicators.join("|"));
+        disaster_types = [...new Set(country_data.map(d => d.disaster_types_name))].filter(d => d !== "").sort();
+        selectedDisasters = selectedDisasters.filter(disaster => disaster_types.includes(disaster));
+        setUrlParam('d', selectedDisasters.join("|"));
+
+        data = country_data.filter((d) => selectedIndicators.includes(d.indicator_type_name));
+        event_data = country_data.filter((d) => selectedDisasters.includes(d.disaster_types_name));
+
+        // Draw legends
+        const indicatorLegend = d3.select(".indicator-legend");
+        indicatorLegend.selectAll(".legend-item").remove();
+
+        selectedIndicators.forEach((key, i) => {
+            const legendItem = indicatorLegend
+                .append("div")
+                .attr("class", "legend-item")
+                .attr("title", "Click to remove")
+                .on("click", () => {selectedIndicators = selectedIndicators.filter(d => d != key); updateDropdowns(); drawChart();});
+            legendItem
+                .append("div")
+                .attr("class", "legend-color")
+                .style("background-color", indicator_color(key));
+            legendItem
+                .append("span")
+                .text(key);
+        });
+        const disasterLegend = d3.select(".disaster-legend");
+        disasterLegend.selectAll(".legend-item").remove();
+
+        selectedDisasters.forEach((key, i) => {
+            const legendItem = disasterLegend
+                .append("div")
+                .attr("class", "legend-item")
+                .attr("title", "Click to remove")
+                .on("click", () => {selectedDisasters = selectedDisasters.filter(d => d != key); updateDropdowns(); drawChart();});
+            legendItem
+                .append("div")
+                .attr("class", "legend-color")
+                .style("background-color", disaster_color(key));
+            legendItem
+                .append("span")
+                .text(key);
+        });
+
+        // Set domains
+        var xExtent = d3.extent(country_data, function(d) { return d.date; }),
+        xRange = Date.parse(xExtent[1]) - Date.parse(xExtent[0]);
+        x.domain([Date.parse(xExtent[0]) - (xRange * .01), Date.parse(xExtent[1]) + (xRange * .01)]);
+        var yMax =  d3.max(data, function(d) { return d.value; });
+        y.domain([0, yMax * 1.05]);
+        x2.domain(x.domain());
+
+        // Draw event rectangles
+        focus.selectAll(".event-rect").remove();
+        focus.selectAll(".event-rect")
+            .data(event_data)
+            .enter().append("rect")
+            .attr("class", "event-rect")
+            .attr("clip-path", "url(#clip)")
+            .attr("x", d => x(d.date))
+            .attr("y", 0)
+            .attr("height", height)
+            .attr("width", (d) => {
+                var w_start = x(d.date),
+                w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+                rect_width = Math.max(w_end - w_start, 2);
+                return(rect_width);
+            })
+            .attr("fill", d => disaster_color(d.disaster_types_name))
+            .on("mouseover", function(event, d) {
+                tooltip.transition().duration(0); // cancel any pending transition
+                tooltip.style("display", "block");
+                tooltip.html(d.tooltip_html)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition().delay(500).style("display", "none");
+            });
+        // Draw focus line segments
+        const line_segments = splitLineSegments(data);
+        var line = d3.line()
+            .x(d => x(d.date))
+            .y(d => y(d.value));
+        focus.selectAll('.line').remove();
+        line_segments.forEach(segment => {
+            focus.append("path")
+            .datum(segment.data)
+            .attr("class", segment.dashed ? "line dashed" : "line")
+            .attr("stroke", indicator_color(segment.indicator))
+            .attr("clip-path", "url(#clip)")
+            .attr("d", line);
+        });
+        //Draw mouseover points
+        focus.selectAll(".point").remove();
+        focus.selectAll(".point")
+            .data(data)
+            .enter().append("circle")
+            .attr("class", "point")
+            .attr("clip-path", "url(#clip)")
+            .attr("cx", d => x(d.date))
+            .attr("cy", d => y(d.value))
+            .attr("r", 4)
+            .attr("fill", d => indicator_color(d.indicator_type_name))
+            .on("mouseover", function(event, d) {
+                tooltip.transition().duration(200).style("display", "block");
+                tooltip.html(d.tooltip_html)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition().duration(500).style("display", "none");
+            });
+
+        // Draw focus axes
+        focus.selectAll(".axis").remove();
+        focus.append("g")
+            .attr("class", "axis axis--x")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+        focus.append("g")
+            .attr("class", "axis axis--y")
+            .call(yAxis);
+
+        // Draw context area
+        const dateSortedData = data.sort((a, b) => {return (a.date < b.date) ? -1 : (a.date > b.date) ? 1 : 0;});
+        const groupedData = d3.group(dateSortedData, d => d.date);
+
+        // Extract keys (indicators)
+        const keys = Array.from(new Set(dateSortedData.map(d => d.indicator_type_name)));
+
+        // Transform grouped data into wide form
+        const transformedData = Array.from(groupedData, ([date, records]) => {
+            const entry = { date };
+            records.forEach(record => {
+                entry[record.indicator_type_name] = record.value;
+            });
+            keys.forEach(key => {
+                if(!(key in entry)){
+                    entry[key] = 0;
+                }
+            });
+            return entry;
+        });
+        
+
+        // Stacking the data
+        const stack = d3.stack()
+            .keys(keys)
+            .order(d3.stackOrderNone)  // Default order
+            .offset(d3.stackOffsetNone);  // Default offset
+
+        const stackedData = stack(transformedData);
+        if(stackedData.length > 0){
+            y2.domain([0, d3.max(stackedData[stackedData.length - 1], d => d[1])]);
+        };
+        var area2 = d3.area()
+                .x(d => x2(d.data.date))
+                .y0(d => y2(d[0]))
+                .y1(d => y2(d[1]));
+        context.selectAll('.area').remove();
+        context.selectAll('.area')
+                .data(stackedData)
+                .enter().append("path")
+                .attr("class", "area")
+                .attr("d", area2)
+                .attr("fill", d => indicator_color(d.key));
+        context.selectAll(".axis").remove();
+        context.append("g")
+            .attr("class", "axis axis--x")
+            .attr("transform", "translate(0," + height2 + ")")
+            .call(xAxis2);
+        context.selectAll(".brush").remove();
+        context.append("g")
+            .attr("class", "brush")
+            .call(brush)
+            .call(brush.move, x.range());
+    };
+
+    // Update chart based on dropdown selection
+    d3.select("#country").on("change", function() {
+        selectedCountry = this.value;
+        setUrlParam('c', selectedCountry);
+        updateDropdowns();
+        drawChart();
+    });
+
+    d3.select("#indicator").on("change", function() {
+        const currentSelection = Array.from(this.selectedOptions).map(option => option.value);
+
+        const added = currentSelection.filter(value => !previousIndicatorSelections.includes(value));
+        const removed = previousIndicatorSelections.filter(value => !currentSelection.includes(value));
+        selectedIndicators = selectedIndicators.concat(added);
+        selectedIndicators = selectedIndicators.filter(d => !removed.includes(d))
+        // Update the previous selection
+        previousIndicatorSelections = currentSelection;
+        drawChart();
+    });
+
+    d3.select("#disaster").on("change", function() {
+        const currentSelection = Array.from(this.selectedOptions).map(option => option.value);
+
+        const added = currentSelection.filter(value => !previousDisasterSelections.includes(value));
+        const removed = previousDisasterSelections.filter(value => !currentSelection.includes(value));
+        selectedDisasters = selectedDisasters.concat(added);
+        selectedDisasters = selectedDisasters.filter(d => !removed.includes(d))
+        // Update the previous selection
+        previousDisasterSelections = currentSelection;
+        drawChart();
+    });
+    
+
+    // Initialize
+    drawChart();
+});
+
+function brushed(event, d) {
+    if (event.sourceEvent === undefined) return; // ignore brush-by-zoom
+    var s = event.selection || x2.range();
+    x.domain(s.map(x2.invert, x2));
+    focus.selectAll(".line").attr("d", line);
+    svg.selectAll(".point").attr("cx", d => x(d.date)).attr("cy", d => y(d.value));
+    svg.selectAll(".event-rect").attr("x", d => x(d.date))
+        .attr("width", (d) => {
+            var w_start = x(d.date),
+            w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+            rect_width = Math.max(w_end - w_start, 2);
+            return(rect_width);
+        });
+    focus.select(".axis--x").call(xAxis);
+    svg.select(".zoom").call(zoom.transform, d3.zoomIdentity
+        .scale(width / (s[1] - s[0]))
+        .translate(-s[0], 0));
+}
+
+function zoomed(event, d) {
+    if (event.sourceEvent === undefined) return; // ignore zoom-by-brush
+    var t = event.transform;
+    x.domain(t.rescaleX(x2).domain());
+    focus.selectAll(".line").attr("d", line);
+    svg.selectAll(".point").attr("cx", d => x(d.date)).attr("cy", d => y(d.value));
+    svg.selectAll(".event-rect").attr("x", d => x(d.date))
+        .attr("width", (d) => {
+            var w_start = x(d.date),
+            w_end = x(Date.parse(d.date) + (1000 * 60 * 60 * 23)),
+            rect_width = Math.max(w_end - w_start, 2);
+            return(rect_width);
+        });
+    focus.select(".axis--x").call(xAxis);
+    context.select(".brush").call(brush.move, x.range().map(t.invertX, t));
+    }
+
+    function type(d) {
+    d.date = parseDate(d.date);
+    d.value = parseFloat(d.value);
+    return d;
+}
+
+</script>
