@@ -277,7 +277,7 @@ const tooltip = d3.select("body")
         tooltip.style("display", "none");  // on mouseout hide tip
     });
 
-d3.csv("data.csv", type).then(function(all_data) {
+d3.csv("https://r2.alexkmiller.com/data.csv", type).then(function(all_data) {
 
     // Load initial data
     const countries = [...new Set(all_data.map(d => d.country_name))].filter(d => d !== "").sort();
