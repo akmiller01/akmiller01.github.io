@@ -58,9 +58,15 @@
         margin-right: 5px;
         border: 1px solid #000;
     }
+
+    select {
+        resize: both;
+    }
 </style>
+<link rel="stylesheet" href="loading.css">
 </head>
 <body>
+<div class="loader" id="loader"></div>
 <label for="country">Country:</label>
 <select id="country"></select>
 <div class="indicator-legend">
@@ -278,7 +284,7 @@ const tooltip = d3.select("body")
     });
 
 d3.csv("https://r2.alexkmiller.com/data.csv", type).then(function(all_data) {
-
+    document.getElementById('loader').style.display = "none";
     // Load initial data
     const countries = [...new Set(all_data.map(d => d.country_name))].filter(d => d !== "").sort();
     let selectedCountry = countries[0];
