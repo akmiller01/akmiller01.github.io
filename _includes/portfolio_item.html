@@ -8,7 +8,14 @@
         <iframe src="{{include.iframe_src}}" scrolling="no" frameborder="0" style="position: relative; height: {{include.iframe_height}}px; width: 100%;"></iframe>
     {% endif %}
     {% if include.img_src %}
-        <img src="{{include.img_src}}" style="width:100%"/>
+        {% if include.explore_link %}
+            <a href="{{include.explore_link}}" target="_blank"><img src="{{include.img_src}}" style="width:100%"/></a>
+        {% else %}
+            <img src="{{include.img_src}}" style="width:100%"/>
+        {% endif %}
+    {% endif %}
+    {% if include.explore_link %}
+        <p><a href="{{include.explore_link}}" target="_blank">Click here to explore</a></p>
     {% endif %}
 </div>
 <br>

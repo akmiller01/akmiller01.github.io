@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maryland Neighborhood Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="assets/style.css" rel="stylesheet">
+    <script src="assets/jquery-3.7.1.slim.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <h1 class="main-title">Maryland Neighborhood Dashboard</h1>
+
+        <div class="main-grid">
+
+            <div class="section"> <h2 class="section-title">Select a neighborhood</h2>
+                <input type="text" id="search-tract" placeholder="Search by name..." class="search-input">
+                <button id="execute-search">Go</button>
+                <div id="map-container"></div>
+            </div>
+
+            <div class="section"> <h2 id="details-title" class="details-title">Select a neighborhood to see details</h2>
+
+                <div id="details-content" class="details-content hidden">
+                    <div>
+                        <h3 class="subsection-title">Key Statistics</h3>
+                        <div class="stats-grid">
+                            <div class="stat-box stat-box-opportunity">
+                                <div class="stat-label stat-label-opportunity">
+                                    Economic Opportunity Index
+                                    <span id="info-icon" class="info-icon">?</span>
+                                </div>
+                                <div id="stat-opportunity" class="stat-value stat-value-opportunity">-</div>
+                            </div>
+                            <div id="info-popup" class="info-popup hidden">
+                                <div class="info-popup-content">
+                                    <span id="close-popup" class="close-popup">x</span>
+                                    <p>The Economic Opportunity Index (0-100) measures the level of economic opportunity in an area. A score of 0 signifies low opportunity, while 100 indicates high opportunity. This index is an average of factors related to business ownership (like business loans and the number of current business owners) and employment (such as median family income, unemployment rate, and average commute time).</p>
+                                </div>
+                            </div>
+                            <div class="stat-box stat-box-unemployment">
+                                <div class="stat-label stat-label-unemployment">Unemployment Rate</div>
+                                <div id="stat-unemployment" class="stat-value stat-value-unemployment">-</div>
+                            </div>
+                            <div class="stat-box stat-box-children">
+                                <div class="stat-label stat-label-children">Children in Poverty Rate</div>
+                                <div id="stat-children" class="stat-value stat-value-children">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="subsection-title">Narrative</h3>
+                        <p id="narrative-text" class="narrative-box">
+                            Detailed description of the neighborhood's characteristics, challenges, and opportunities will appear here.
+                        </p>
+                    </div>
+                    <div id="photos-section">
+                        <h3 class="subsection-title">Photos <img src="assets/mapillary_logo_white.png" alt="Mapillary Logo" class="mapillary-logo"></h3>
+                        <div class="photo-grid">
+                            <img id="photo1" src="https://placehold.co/300x200/e2e8f0/94a3b8?text=Image+1" alt="Placeholder Image 1" onerror="this.src='https://placehold.co/300x200/e2e8f0/94a3b8?text=Image+Not+Found'">
+                            <img id="photo2" src="https://placehold.co/300x200/e2e8f0/94a3b8?text=Image+2" alt="Placeholder Image 2" onerror="this.src='https://placehold.co/300x200/e2e8f0/94a3b8?text=Image+Not+Found'">
+                            <img id="photo3" src="https://placehold.co/300x200/e2e8f0/94a3b8?text=Image+3" alt="Placeholder Image 3" onerror="this.src='https://placehold.co/300x200/e2e8f0/94a3b8?text=Image+Not+Found'">
+                        </div>
+                    </div>
+                    <hr/>
+                    <div class="disclaimer-section">
+                        <p class="disclaimer-text">
+                            Narrative text was automatically generated and may contain errors.
+                            Neighborhood names programmatically generated from the <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> Overpass API.
+                            Street-level imagery is provided by <a href="https://www.mapillary.com/" target="_blank" rel="noopener noreferrer">Mapillary</a>.
+                        </p>
+                    </div>
+                </div>
+                 <div id="details-placeholder" class="details-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p>Click on a neighborhood in the map area to view its details.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setUrlParam(key, value){
+            // Get the current URLSearchParams object
+            const queryParams = new URLSearchParams(window.location.search);
+
+            // Set a new parameter or modify an existing one
+            queryParams.set(key, value);
+
+            // Construct the new URL
+            const newUrl = window.location.pathname + '?' + queryParams.toString();
+
+            // Update the URL in the browser history without reloading the page
+            history.replaceState(null, null, newUrl);
+        }
+
+        function getUrlParam(key){
+            // Get the current URLSearchParams object
+            const queryParams = new URLSearchParams(window.location.search);
+            return(queryParams.get(key))
+        }
+
+
+        var southWest = L.latLng(37.5, -80),
+        northEast = L.latLng(40, -75),
+        bounds = L.latLngBounds(southWest, northEast);
+        const map = L.map('map-container', {
+            center: [39, -77.3], // Center on Maryland, 
+            zoom: 7,
+            maxBounds: bounds
+        });
+
+        // Basemap
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/{variant}/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>',
+            variant: 'light_nolabels'
+        }).addTo(map);
+
+        const LocateControl = L.Control.extend({
+            options: {
+                position: 'topright' // Position in the top right corner
+            },
+
+            onAdd: function (map) {
+                // Create the control container div
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-locate');
+                const link = L.DomUtil.create('a', '', container);
+                link.href = '#';
+                link.title = 'Zoom to my location';
+                link.innerHTML = '📍'; // Style using emoji
+
+                // Prevent map clicks from propagating through the button
+                L.DomEvent.disableClickPropagation(container);
+
+                // Handle button clicks
+                L.DomEvent.on(link, 'click', function(ev) {
+                    L.DomEvent.stop(ev); // Stop the event from propagating
+                    locateUser();
+                });
+
+                return container;
+            }
+        });
+
+        // Add the custom control to the map
+        map.addControl(new LocateControl());
+
+        // Keep track of the location marker
+        let locationMarker = null;
+
+        // Geolocation function
+        function locateUser() {
+            map.locate({
+                setView: false,  // Disable center the map on the location
+                maxZoom: 16,    // Maximum zoom level when centering
+                enableHighAccuracy: true // Request high accuracy
+            });
+        }
+
+        /**
+         * Checks if a point is inside a polygon using the Ray Casting Algorithm.
+         *
+         * @param {object} point The point to check. Must have 'x' and 'y' properties,
+         * or 'lat' and 'lng' properties (lng will be treated as x, lat as y).
+         * @param {Array<object>} polygonVertices An array of vertex objects forming the polygon ring.
+         * Each vertex must have 'x' and 'y' or 'lat' and 'lng'.
+         * @returns {boolean} True if the point is inside the polygon, false otherwise.
+         */
+        function isPointInPolygon(point, polygonVertices) {
+            let px, py;
+
+            // Adapt point format
+            if (point.lat !== undefined && point.lng !== undefined) {
+                px = point.lng; // Longitude as X
+                py = point.lat; // Latitude as Y
+            } else if (point.x !== undefined && point.y !== undefined) {
+                px = point.x;
+                py = point.y;
+            } else {
+                console.error("Point object must have 'x','y' or 'lat','lng' properties.");
+                return false;
+            }
+
+            if (!polygonVertices || polygonVertices.length < 3) {
+                // A polygon needs at least 3 vertices
+                return false;
+            }
+
+            let isInside = false;
+
+            // Bounding box check for quick exclusion (optional but good for performance)
+            let minX, maxX, minY, maxY;
+            const firstVertex = polygonVertices[0];
+            if (firstVertex.lng !== undefined) { // L.LatLng format
+                minX = maxX = firstVertex.lng;
+                minY = maxY = firstVertex.lat;
+            } else { // {x,y} format
+                minX = maxX = firstVertex.x;
+                minY = maxY = firstVertex.y;
+            }
+
+            for (let k = 1; k < polygonVertices.length; k++) {
+                const v = polygonVertices[k];
+                const vx = v.lng !== undefined ? v.lng : v.x;
+                const vy = v.lat !== undefined ? v.lat : v.y;
+                minX = Math.min(minX, vx);
+                maxX = Math.max(maxX, vx);
+                minY = Math.min(minY, vy);
+                maxY = Math.max(maxY, vy);
+            }
+
+            if (px < minX || px > maxX || py < minY || py > maxY) {
+                return false; // Point is outside the bounding box
+            }
+            // End of bounding box check
+
+            // Ray casting algorithm
+            for (let i = 0, j = polygonVertices.length - 1; i < polygonVertices.length; j = i++) {
+                const vertexI = polygonVertices[i];
+                const vertexJ = polygonVertices[j];
+
+                let vix, viy, vjx, vjy;
+
+                if (vertexI.lat !== undefined) { // L.LatLng format
+                    vix = vertexI.lng;
+                    viy = vertexI.lat;
+                    vjx = vertexJ.lng;
+                    vjy = vertexJ.lat;
+                } else { // {x,y} format
+                    vix = vertexI.x;
+                    viy = vertexI.y;
+                    vjx = vertexJ.x;
+                    vjy = vertexJ.y;
+                }
+
+                // Check if the horizontal ray from the point intersects the edge (vertexI, vertexJ)
+                const intersect = ((viy > py) !== (vjy > py)) &&
+                                (px < (vjx - vix) * (py - viy) / (vjy - viy) + vix);
+                if (intersect) {
+                    isInside = !isInside;
+                }
+            }
+
+            return isInside;
+        }
+
+
+        /**
+         * Checks if a L.LatLng point is inside a single L.Polygon Leaflet layer
+         * using the custom isPointInPolygon math function.
+         * This function correctly handles polygons with holes.
+         *
+         * @param {L.LatLng} latlng The point to check.
+         * @param {L.Polygon} leafletPolygon The Leaflet L.Polygon layer.
+         * @returns {boolean} True if the point is inside the polygon, false otherwise.
+         */
+        function isPointInSingleLeafletPolygon_Custom(latlng, leafletPolygon) {
+            if (!latlng || !(leafletPolygon instanceof L.Polygon)) {
+                return false;
+            }
+
+            const allLatLngs = leafletPolygon.getLatLngs(); // Array of L.LatLngs for outer, or array of arrays for holes.
+
+            if (!allLatLngs || allLatLngs.length === 0) {
+                return false;
+            }
+
+            // Get the outer ring:
+            // For simple polygons, getLatLngs() returns [L.LatLng, L.LatLng, ...]
+            // For polygons with holes, getLatLngs() returns [[L.LatLng,...], [L.LatLng,...], ...]
+            const outerRingVertices = Array.isArray(allLatLngs[0][0]) ? allLatLngs[0][0] : allLatLngs[0];
+
+            if (outerRingVertices.length < 3) return false; // Not a valid polygon
+
+            // Check if point is in the outer ring using the custom mathematical function
+            // Note: L.LatLng objects have .lat and .lng properties, which isPointInPolygon handles.
+            if (!isPointInPolygon(latlng, outerRingVertices)) {
+                return false;
+            }
+
+
+            // If it's a polygon with holes (allLatLngs is an array of arrays and has more than one item)
+            if (Array.isArray(allLatLngs[0]) && allLatLngs.length > 1) {
+                for (let i = 1; i < allLatLngs.length; i++) {
+                    const innerRingVertices = allLatLngs[i];
+                    if (innerRingVertices.length < 3) continue; // Not a valid hole polygon
+                    if (isPointInPolygon(latlng, innerRingVertices)) {
+                        return false; // Point is in a hole, so it's not considered inside the polygon fill
+                    }
+                }
+            }
+            return true; // Point is in the outer ring and not in any holes
+        }
+
+
+        /**
+         * Checks if a L.LatLng point is within a Leaflet layer representing a MultiPolygon,
+         * using the custom isPointInSingleLeafletPolygon_Custom function.
+         * This layer could be an L.GeoJSON layer created from a MultiPolygon feature,
+         * or an L.MultiPolygon layer.
+         *
+         * @param {L.LatLng} latlng The point to check (e.g., e.latlng from a click event).
+         * @param {L.Layer} multiPolygonFeatureLayer The Leaflet layer (e.g., L.GeoJSON or L.MultiPolygon).
+         * @returns {boolean} True if the point is within any of the polygons of the MultiPolygon, false otherwise.
+         */
+        function isPointInMultiPolygonLayer_Custom(latlng, multiPolygonFeatureLayer) {
+            if (!latlng || !multiPolygonFeatureLayer) {
+                return false;
+            }
+
+            if (typeof multiPolygonFeatureLayer.getLayers === 'function') {
+                const individualPolygons = multiPolygonFeatureLayer.getLayers();
+                for (let i = 0; i < individualPolygons.length; i++) {
+                    const polygon = individualPolygons[i];
+                    if (polygon instanceof L.Polygon) { // Ensure the sub-layer is a Polygon
+                        if (isPointInSingleLeafletPolygon_Custom(latlng, polygon)) {
+                            return true; // Point is in one of the polygons
+                        }
+                    }
+                }
+            } else if (multiPolygonFeatureLayer instanceof L.Polygon) {
+                // Handle case where the passed layer is just a single L.Polygon
+                return isPointInSingleLeafletPolygon_Custom(latlng, multiPolygonFeatureLayer);
+            }
+
+            return false; // Point is not in any of the polygons
+        }
+
+        // Click routine
+        function clickLayer(layer, removeMarker=true){
+            if (locationMarker && removeMarker) {
+                map.removeLayer(locationMarker);
+            }
+            tractLayers.eachLayer((otherLayer) => {otherLayer.setStyle({fillColor: otherLayer.feature.properties.originalColor})});
+            const regionKey = layer.feature.properties.GEOID.toString();
+            currentGeoid = regionKey;
+            setUrlParam("id", currentGeoid);
+            updateDetails(regionKey);
+            layer.setStyle({
+                fillColor: "blue"
+            });
+            map.fitBounds(layer.getBounds());
+        };
+
+        // Handle location found event
+        function onLocationFound(e) {
+            // Remove previous marker/circle if they exist
+            if (locationMarker) {
+                map.removeLayer(locationMarker);
+            }
+
+            // Add marker at the found location
+            locationMarker = L.marker(e.latlng).addTo(map)
+                .bindPopup(`Your location`).openPopup();
+
+            // Click underlying layer
+            tractLayers.eachLayer((layer) => {
+                if(isPointInMultiPolygonLayer_Custom(e.latlng, layer)){
+                    clickLayer(layer, removeMarker=false);
+                }
+            });
+        }
+
+        // Handle location error event
+        function onLocationError(e) {
+            alert("Location Error: " + e.message); // Simple error feedback
+        }
+
+        function safeFormat(value, style='percent', digits=1) {
+            if (value === null || value === undefined) {
+                return '-';
+            }
+            return new Intl.NumberFormat('default', {
+                style: style,
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits,
+            }).format(value);
+        };
+
+        function getRedGradientColor(value) {
+            if(value === null){
+                return "#AAAAAA";
+            };
+            // Ensure the value is within the 0-100 range
+            const percentage = Math.min(100, Math.max(0, value)) / 100;
+
+            const red_start = "#c84a35";
+            const red_end = "#f7e4e0";
+
+            // Helper function to convert hex to RGB
+            function hexToRgb(hex) {
+                const bigint = parseInt(hex.slice(1), 16);
+                const r = (bigint >> 16) & 255;
+                const g = (bigint >> 8) & 255;
+                const b = bigint & 255;
+                return [r, g, b];
+            }
+
+            // Helper function to convert RGB to hex
+            function rgbToHex(r, g, b) {
+                return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toLowerCase();
+            }
+
+            const [r1, g1, b1] = hexToRgb(red_start);
+            const [r2, g2, b2] = hexToRgb(red_end);
+
+            // Linear interpolation for each color channel
+            const r = Math.round(r1 + percentage * (r2 - r1));
+            const g = Math.round(g1 + percentage * (g2 - g1));
+            const b = Math.round(b1 + percentage * (b2 - b1));
+
+            return rgbToHex(r, g, b);
+        }
+
+        // Register event listeners for Leaflet's locate events
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        // Add the GeoJSON layer to the map
+        let neighborhoodData = {};
+        var tractLayers = new L.GeoJSON.AJAX("assets/tracts.geojson", {
+            style: (feature) => {
+                // Styling each polygon
+                return {fillColor: "black", color: "black", weight: 0.5, opacity: 0.4, fillOpacity: 1 };
+            },
+            onEachFeature: (feature, layer) => {
+                neighborhoodData[feature.properties.GEOID.toString()] = {
+                    name: feature.properties.tract_name,
+                    county_name: feature.properties.county_name,
+                    photos: [
+                        feature.properties.photo1,
+                        feature.properties.photo2,
+                        feature.properties.photo3
+                    ],
+                    stats: {
+                        opportunity: `${safeFormat(feature.properties.economic_opportunity_index, style='decimal', digits=0)}`,
+                        unemployment: `${safeFormat(feature.properties.unemployment_rate)}`,
+                        childrenPoverty: `${safeFormat(feature.properties.child_pov_pct)}`
+                    },
+                    narrative: feature.properties.narrative
+                }
+                feature.properties.active = false;
+                feature.properties.originalColor = getRedGradientColor(feature.properties.economic_opportunity_index);
+                layer.setStyle({
+                    fillColor: feature.properties.originalColor
+                });
+                layer.on({
+                    click: () => clickLayer(layer)
+                });
+            }
+        }).addTo(map);
+
+        let currentGeoid = null;
+        tractLayers.on('data:loaded', () => {
+            // Simulate click for URL param
+            currentGeoid = getUrlParam("id");
+            tractLayers.eachLayer((layer) => {
+                if (currentGeoid && currentGeoid.toString() === layer.feature.properties.GEOID.toString()) {
+                    clickLayer(layer);
+                }
+            });
+        });
+        
+
+        // --- DOM Elements ---
+        const mapContainer = document.getElementById('map-container');
+        const detailsTitle = document.getElementById('details-title');
+        const detailsContent = document.getElementById('details-content');
+        const detailsPlaceholder = document.getElementById('details-placeholder');
+        const photoSection = document.getElementById('photos-section');
+        const photo1 = document.getElementById('photo1');
+        const photo2 = document.getElementById('photo2');
+        const photo3 = document.getElementById('photo3');
+        const statOpportunity = document.getElementById('stat-opportunity');
+        const statUnemployment = document.getElementById('stat-unemployment');
+        const statChildren = document.getElementById('stat-children');
+        const narrativeText = document.getElementById('narrative-text');
+        const mapAreas = document.querySelectorAll('.map-area'); // Get all clickable areas
+
+        // --- Function to Update Details ---
+        function updateDetails(regionKey) {
+            // Smooth scroll to the details section if it's not already in view
+            const detailsRect = detailsTitle.getBoundingClientRect();
+            if (detailsRect.bottom > window.innerHeight) {
+                detailsTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            const data = neighborhoodData[regionKey];
+            if (data) {
+                detailsTitle.textContent = `${data.name}`;
+                const photoElements = [photo1, photo2, photo3];
+                let anyPhotoAvailable = false;
+
+                if (data.photos && Array.isArray(data.photos)) {
+                    for (let i = 0; i < photoElements.length; i++) {
+                        const photoElement = photoElements[i];
+                        if (data.photos[i] && typeof data.photos[i] === 'string' && data.photos[i].trim() !== '') {
+                            photoElement.src = data.photos[i];
+                            photoElement.alt = `${data.name} Photo ${i + 1}`;
+                            photoElement.style.display = ''; // Or 'inline-block' if that's the original/desired display
+                            anyPhotoAvailable = true;
+                        } else {
+                            photoElement.style.display = 'none';
+                            photoElement.src = ''; // Clear src to prevent loading old/placeholder if it was visible
+                            photoElement.alt = '';
+                        }
+                    }
+                } else {
+                    // If data.photos is not an array or undefined, hide all photo elements
+                    photoElements.forEach(photoElement => {
+                        photoElement.style.display = 'none';
+                        photoElement.src = '';
+                        photoElement.alt = '';
+                    });
+                }
+
+                if (anyPhotoAvailable) {
+                    photoSection.style.display = '';
+                } else {
+                    photoSection.style.display = 'none';
+                }
+                statOpportunity.textContent = data.stats.opportunity || '-';
+                statUnemployment.textContent = data.stats.unemployment || '-';
+                statChildren.textContent = data.stats.childrenPoverty || '-';
+                narrativeText.textContent = data.narrative || 'No narrative available.';
+                detailsContent.classList.remove('hidden');
+                detailsPlaceholder.classList.add('hidden');
+            } else {
+                detailsTitle.textContent = "Neigborhood Not Found";
+                detailsContent.classList.add('hidden');
+                detailsPlaceholder.classList.remove('hidden');
+                detailsPlaceholder.querySelector('p').textContent = `Data for neighborhood key "${regionKey}" could not be found.`;
+                mapAreas.forEach(area => area.classList.remove('active'));
+            }
+        }
+
+         // --- Initial State  ---
+         detailsContent.classList.add('hidden');
+         detailsPlaceholder.classList.remove('hidden');
+
+         // --- Search Functionality ---
+        /**
+         * Calculates the Levenshtein distance between two strings.
+         * This distance is the minimum number of single-character edits (insertions, deletions, or substitutions)
+         * required to change one word into the other.
+         * @param {string} s1 The first string.
+         * @param {string} s2 The second string.
+         * @returns {number} The Levenshtein distance.
+         */
+        function levenshtein(s1, s2) {
+            // Ensure s1 is not shorter than s2 for optimization
+            if (s1.length < s2.length) {
+                return levenshtein(s2, s1);
+            }
+
+            // If s2 is empty, the distance is the length of s1
+            if (s2.length === 0) {
+                return s1.length;
+            }
+
+            // Initialize the previous row for dynamic programming
+            let previousRow = Array.from({ length: s2.length + 1 }, (_, i) => i);
+
+            // Iterate through characters of s1
+            for (let i = 0; i < s1.length; i++) {
+                const s1Char = s1[i];
+                // Initialize the current row, starting with deletion cost
+                let currentRow = [i + 1];
+                // Iterate through characters of s2
+                for (let j = 0; j < s2.length; j++) {
+                    const s2Char = s2[j];
+                    // Calculate costs
+                    const insertions = previousRow[j + 1] + 1;
+                    const deletions = currentRow[j] + 1;
+                    const substitutions = previousRow[j] + (s1Char !== s2Char ? 1 : 0);
+                    // Store the minimum cost in the current row
+                    currentRow.push(Math.min(insertions, deletions, substitutions));
+                }
+                // Set the current row as the previous row for the next iteration
+                previousRow = currentRow;
+            }
+
+            // The distance is the last value in the previous row
+            return previousRow[s2.length];
+        }
+
+        /**
+         * Performs a ranked text search on a dictionary of objects.
+         * Prioritizes matches in shorter strings if key priority and scores are equal.
+         *
+         * @param {string} query The search query string.
+         * @param {Object<string, Object>} searchDict An object where keys are the returnable identifiers
+         * and values are objects to search within.
+         * @param {Array<string>} searchKeys An array of keys within each inner object to search against.
+         * The order determines priority (earlier keys are higher priority).
+         * @returns {Array<string>} An array of keys from `searchDict` for matched items, sorted by relevance.
+         */
+        function search(query, searchDict, searchKeys) {
+            // Validate inputs
+            if (!query || typeof query !== 'string' || query.trim() === '') {
+                return [];
+            }
+            if (!searchDict || typeof searchDict !== 'object' || Array.isArray(searchDict) || searchDict === null) {
+                console.error("searchDict must be an object.");
+                return [];
+            }
+            if (!searchKeys || !Array.isArray(searchKeys) || searchKeys.length === 0) {
+                console.error("searchKeys must be a non-empty array of strings.");
+                return [];
+            }
+
+            const queryLower = query.toLowerCase();
+            const queryTokens = queryLower.split(/\s+/).filter(token => token.length > 0);
+
+            if (queryTokens.length === 0 && queryLower.length === 0) {
+                return [];
+            }
+
+            const rankedResults = [];
+
+            // Iterate over each key (returnable identifier) in the search dictionary
+            for (const returnableKey in searchDict) {
+                if (!searchDict.hasOwnProperty(returnableKey)) {
+                    continue;
+                }
+
+                const item = searchDict[returnableKey];
+
+                if (typeof item !== 'object' || item === null) {
+                    continue;
+                }
+
+                let bestScoreForItem = 0;
+                let bestKeyMatchIndex = Infinity;
+                let bestMatchFieldLengthForItem = Infinity; // Stores length of the field that gave the best score
+                let matchFoundInItem = false;
+
+                // Iterate over each search key specified for the current item
+                for (let keyIdx = 0; keyIdx < searchKeys.length; keyIdx++) {
+                    const currentSearchKey = searchKeys[keyIdx];
+
+                    if (!item.hasOwnProperty(currentSearchKey)) {
+                        continue;
+                    }
+
+                    const fieldValue = item[currentSearchKey];
+
+                    if (typeof fieldValue !== 'string' || fieldValue.trim() === '') {
+                        continue;
+                    }
+
+                    const fieldValueLower = fieldValue.toLowerCase();
+                    const fieldTokens = fieldValueLower.split(/\s+/).filter(token => token.length > 0);
+                    const currentFieldLength = fieldValueLower.length; // Length of the current field being searched
+
+                    let currentScoreForKey = 0;
+                    let exactPhraseScore = 0;
+                    let allWordsOrderedScore = 0;
+                    let allWordsAnyOrderScore = 0;
+                    let fuzzyWordMatchScore = 0;
+
+                    // 1. Exact Phrase Match
+                    if (fieldValueLower.includes(queryLower)) {
+                        exactPhraseScore = 1000;
+                    }
+
+                    // 2. All Query Words Match in Order
+                    if (queryTokens.length > 0) {
+                        let lastFoundFieldTokenIndex = -1;
+                        let wordsFoundInOrderCount = 0;
+                        for (const qToken of queryTokens) {
+                            let currentQueryTokenFoundInOrder = false;
+                            for (let i = lastFoundFieldTokenIndex + 1; i < fieldTokens.length; i++) {
+                                if (fieldTokens[i] === qToken) {
+                                    lastFoundFieldTokenIndex = i;
+                                    wordsFoundInOrderCount++;
+                                    currentQueryTokenFoundInOrder = true;
+                                    break;
+                                }
+                            }
+                            if (!currentQueryTokenFoundInOrder) break;
+                        }
+                        if (wordsFoundInOrderCount === queryTokens.length) {
+                            allWordsOrderedScore = 500;
+                        }
+                    }
+
+                    // 3. All Query Words Match in Any Order
+                    if (queryTokens.length > 0 && allWordsOrderedScore === 0) {
+                        const tempFieldTokens = [...fieldTokens];
+                        let wordsFoundAnyOrderCount = 0;
+                        for (const qToken of queryTokens) {
+                            const idxInTempField = tempFieldTokens.indexOf(qToken);
+                            if (idxInTempField !== -1) {
+                                wordsFoundAnyOrderCount++;
+                                tempFieldTokens.splice(idxInTempField, 1);
+                            }
+                        }
+                        if (wordsFoundAnyOrderCount === queryTokens.length) {
+                            allWordsAnyOrderScore = 200;
+                        }
+                    }
+
+                    // 4. Fuzzy Word Match
+                    if (queryTokens.length > 0) {
+                        let totalSimilarityScore = 0;
+                        let matchedQueryTokenCount = 0;
+                        const usedFieldTokenIndices = new Set();
+                        for (const qToken of queryTokens) {
+                            let bestSimilarityForCurrentQToken = 0;
+                            let bestMatchingFieldIndex = -1;
+                            for (let fIdx = 0; fIdx < fieldTokens.length; fIdx++) {
+                                if (usedFieldTokenIndices.has(fIdx)) continue;
+                                const distance = levenshtein(qToken, fieldTokens[fIdx]);
+                                const maxLength = Math.max(qToken.length, fieldTokens[fIdx].length);
+                                if (maxLength === 0) {
+                                if (qToken === fieldTokens[fIdx]) bestSimilarityForCurrentQToken = 1;
+                                continue;
+                                }
+                                const similarity = 1 - (distance / maxLength);
+                                if (similarity > bestSimilarityForCurrentQToken) {
+                                    bestSimilarityForCurrentQToken = similarity;
+                                    bestMatchingFieldIndex = fIdx;
+                                }
+                            }
+                            const FUZZY_SIMILARITY_THRESHOLD = 0.6;
+                            if (bestSimilarityForCurrentQToken >= FUZZY_SIMILARITY_THRESHOLD) {
+                                totalSimilarityScore += bestSimilarityForCurrentQToken;
+                                matchedQueryTokenCount++;
+                                if (bestMatchingFieldIndex !== -1) usedFieldTokenIndices.add(bestMatchingFieldIndex);
+                            }
+                        }
+                        if (matchedQueryTokenCount > 0) {
+                            const averageSimilarity = totalSimilarityScore / matchedQueryTokenCount;
+                            const proportionOfQueryTokensMatched = matchedQueryTokenCount / queryTokens.length;
+                            fuzzyWordMatchScore = averageSimilarity * proportionOfQueryTokensMatched * 100;
+                        }
+                    }
+
+                    currentScoreForKey = exactPhraseScore + allWordsOrderedScore + allWordsAnyOrderScore + fuzzyWordMatchScore;
+
+                    if (currentScoreForKey > 0) {
+                        matchFoundInItem = true;
+                        // Update best score if:
+                        // 1. This key has higher priority (lower keyIdx)
+                        // 2. Same key priority, but higher score
+                        // 3. Same key priority, same score, but current field is shorter
+                        if (keyIdx < bestKeyMatchIndex) {
+                            bestKeyMatchIndex = keyIdx;
+                            bestScoreForItem = currentScoreForKey;
+                            bestMatchFieldLengthForItem = currentFieldLength;
+                        } else if (keyIdx === bestKeyMatchIndex) {
+                            if (currentScoreForKey > bestScoreForItem) {
+                                bestScoreForItem = currentScoreForKey;
+                                bestMatchFieldLengthForItem = currentFieldLength;
+                            } else if (currentScoreForKey === bestScoreForItem) {
+                                if (currentFieldLength < bestMatchFieldLengthForItem) {
+                                    bestMatchFieldLengthForItem = currentFieldLength; // Prefer shorter field for same score
+                                }
+                            }
+                        }
+                    }
+                } // End loop over searchKeys
+
+                if (matchFoundInItem) {
+                    rankedResults.push({
+                        value: returnableKey,
+                        score: bestScoreForItem,
+                        keyPriority: bestKeyMatchIndex,
+                        matchedFieldLength: bestMatchFieldLengthForItem, // Add length for sorting
+                    });
+                }
+            } // End loop over searchDict
+
+            // Sort results:
+            // 1. By keyPriority (ascending - lower index is higher priority).
+            // 2. By score (descending - higher score is better).
+            // 3. By matchedFieldLength (ascending - shorter field is better).
+            rankedResults.sort((a, b) => {
+                if (a.keyPriority !== b.keyPriority) {
+                    return a.keyPriority - b.keyPriority;
+                }
+                if (b.score !== a.score) { // Higher score first
+                    return b.score - a.score;
+                }
+                return a.matchedFieldLength - b.matchedFieldLength; // Shorter field first
+            });
+
+            return rankedResults.map(res => res.value);
+        }
+
+
+         const searchInput = document.getElementById('search-tract');
+         const searchButton = document.getElementById('execute-search');
+
+         function performSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            if (!query) return;
+
+            let foundLayer = null;
+            let foundKey = null;
+
+            const foundKeys = search(query, neighborhoodData, ['name', 'county_name']);
+
+            if (foundKeys.length > 0) {
+                foundKey = foundKeys[0];
+                tractLayers.eachLayer((layer) => {
+                    if (layer.feature.properties.GEOID.toString() === foundKey) {
+                        foundLayer = layer;
+                    }
+                });
+            }
+
+            if (foundLayer) {
+                clickLayer(foundLayer);
+                searchInput.value = ''; // Clear search input after successful search
+            } else {
+                alert(`Tract "${searchInput.value}" not found.`);
+            }
+         }
+
+         searchInput.addEventListener('keypress', function(event) {
+             if (event.key === 'Enter') {
+                 performSearch();
+             }
+         });
+
+         searchButton.addEventListener('click', performSearch);
+
+        const infoIcon = document.getElementById('info-icon');
+        const infoPopup = document.getElementById('info-popup');
+        const closePopup = document.getElementById('close-popup');
+        let overlay = null;
+
+        infoIcon.addEventListener('click', () => {
+            infoPopup.classList.remove('hidden');
+            overlay = document.createElement('div');
+            overlay.className = 'info-popup-overlay';
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', closeInfoPopup);
+        });
+
+        closePopup.addEventListener('click', closeInfoPopup);
+
+        function closeInfoPopup() {
+            infoPopup.classList.add('hidden');
+            if (overlay) {
+                document.body.removeChild(overlay);
+                overlay = null;
+            }
+        }
+    </script>
+</body>
+</html>
