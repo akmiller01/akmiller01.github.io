@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mud &amp; Bellow — Hippo Safaris</title>
+<meta name="description" content="Mud & Bellow runs small-boat hippo safari expeditions across Botswana, Tanzania and Ethiopia. 100% mud, 0% refunds.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦛</text></svg>">
+<style>
+  :root{
+    --mud:#2b2118;
+    --mud-soft:#5c4a3a;
+    --river:#0e7490;
+    --river-deep:#0b4f63;
+    --river-ink:#083744;
+    --pink:#f472b6;
+    --pink-deep:#db2777;
+    --pink-soft:#fbcfe8;
+    --sand:#f7f1e5;
+    --card:#fffdf8;
+    --sun:#fbbf24;
+    --radius:22px;
+    --shadow:0 10px 30px rgba(43,33,24,.12);
+    --font: "Avenir Next","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--sand);color:var(--mud);line-height:1.6;overflow-x:hidden}
+  img{display:block;max-width:100%}
+  a{color:var(--river)}
+  section{scroll-margin-top:76px}
+  :focus-visible{outline:3px solid var(--pink);outline-offset:3px;border-radius:6px}
+
+  /* ---------- nav ---------- */
+  .nav{position:fixed;inset:0 0 auto 0;z-index:50;background:rgba(247,241,229,.85);backdrop-filter:blur(10px);border-bottom:2px solid rgba(43,33,24,.08)}
+  .nav-inner{max-width:1160px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--mud)}
+  .brand-hippo{font-size:1.9rem;display:inline-block;transition:transform .3s;cursor:pointer;user-select:none}
+  .brand-hippo.honk{animation:wobble .6s ease}
+  @keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-18deg) scale(1.15)}55%{transform:rotate(14deg) scale(1.1)}80%{transform:rotate(-6deg)}}
+  .brand-name{font-weight:800;font-size:1.2rem;letter-spacing:.02em}
+  .brand-name small{display:block;font-size:.62rem;font-weight:600;letter-spacing:.28em;text-transform:uppercase;color:var(--pink-deep)}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{text-decoration:none;color:var(--mud);font-weight:600;font-size:.95rem;padding:8px 12px;border-radius:999px;transition:background .2s,color .2s}
+  .nav-links a:hover{background:rgba(14,116,144,.1)}
+  .nav-links a.active{background:var(--river);color:#fff}
+  .nav-links a.nav-cta{background:var(--pink);color:#fff;margin-left:8px}
+  .nav-links a.nav-cta:hover{background:var(--pink-deep)}
+  .nav-toggle{display:none;background:none;border:0;cursor:pointer;padding:8px}
+  .nav-toggle span{display:block;width:24px;height:3px;background:var(--mud);margin:5px 0;border-radius:3px;transition:transform .25s,opacity .25s}
+  .nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(8px) rotate(45deg)}
+  .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+  .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;min-height:100svh;display:grid;place-items:center;text-align:center;overflow:hidden;color:#fff}
+  .hero-bg{position:absolute;inset:0;background:url('chobe-river-front.jpg') center/cover no-repeat;animation:slowzoom 24s ease-in-out infinite alternate}
+  @keyframes slowzoom{from{transform:scale(1)}to{transform:scale(1.12)}}
+  .hero-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,55,68,.55) 0%,rgba(8,55,68,.35) 45%,rgba(8,55,68,.78) 100%)}
+  .hero-content{position:relative;z-index:1;padding:120px 24px 80px;max-width:880px}
+  .kicker{display:inline-block;background:rgba(251,191,36,.92);color:var(--mud);font-weight:700;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;padding:7px 16px;border-radius:999px;transform:rotate(-1.5deg);margin-bottom:22px}
+  .hero h1{font-size:clamp(2.7rem,7.5vw,5.2rem);line-height:1.04;font-weight:800;letter-spacing:-.02em;text-shadow:0 4px 24px rgba(0,0,0,.4)}
+  .hero h1 em{font-style:normal;color:var(--pink)}
+  .lede{margin:20px auto 30px;max-width:560px;font-size:1.15rem;color:rgba(255,255,255,.92)}
+  .hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;border:0;cursor:pointer;font:inherit;font-weight:700;font-size:1rem;padding:14px 28px;border-radius:999px;text-decoration:none;transition:transform .18s,box-shadow .18s,background .18s}
+  .btn:hover{transform:translateY(-3px)}
+  .btn:active{transform:translateY(0)}
+  .btn-pink{background:var(--pink);color:#fff;box-shadow:0 8px 20px rgba(219,39,119,.35)}
+  .btn-pink:hover{background:var(--pink-deep)}
+  .btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:2px solid rgba(255,255,255,.55)}
+  .btn-ghost:hover{background:rgba(255,255,255,.26)}
+  .btn-river{background:var(--river);color:#fff;box-shadow:0 8px 20px rgba(14,116,144,.3)}
+  .btn-river:hover{background:var(--river-deep)}
+  .scroll-hint{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:1;color:rgba(255,255,255,.85);text-decoration:none;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase}
+  .scroll-hint span{display:inline-block;animation:bob 1.6s ease-in-out infinite;font-size:1.1rem}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
+  /* ---------- stats ---------- */
+  .stats{background:var(--river-deep);color:#fff;padding:44px 20px}
+  .stats-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:28px;text-align:center}
+  .stat-num{display:block;font-size:clamp(1.9rem,4vw,2.9rem);font-weight:800;color:var(--sun)}
+  .stat-label{font-size:.85rem;color:rgba(255,255,255,.8)}
+
+  /* ---------- sections ---------- */
+  .section{padding:90px 20px}
+  .wrap{max-width:1100px;margin:0 auto}
+  .section-head{text-align:center;margin-bottom:52px}
+  .section-head h2{font-size:clamp(2rem,4.5vw,3rem);font-weight:800;letter-spacing:-.02em}
+  .section-head p{color:var(--mud-soft);font-size:1.1rem;margin-top:8px}
+  .section-head .squig{color:var(--pink);font-size:1.4rem;letter-spacing:.4em}
+
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- why ---------- */
+  .why-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-bottom:56px}
+  .why-img img{border-radius:var(--radius);box-shadow:var(--shadow);aspect-ratio:4/3;object-fit:cover;width:100%;transform:rotate(-1.2deg)}
+  .why-img figcaption,.wide-img figcaption{margin-top:12px;font-size:.9rem;color:var(--mud-soft);font-style:italic}
+  .why-facts{list-style:none;display:grid;gap:18px}
+  .why-facts li{background:var(--card);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);border-left:6px solid var(--pink)}
+  .why-facts li:nth-child(even){border-left-color:var(--river)}
+  .why-facts strong{display:block;font-size:1.05rem;margin-bottom:4px}
+  .wide-img{position:relative}
+  .wide-img img{width:100%;border-radius:var(--radius);box-shadow:var(--shadow);max-height:560px;object-fit:cover}
+  .wide-tag{position:absolute;top:18px;left:18px;background:var(--sun);color:var(--mud);font-weight:700;font-size:.8rem;letter-spacing:.06em;padding:6px 14px;border-radius:999px;transform:rotate(-2deg)}
+
+  /* ---------- safaris ---------- */
+  .safaris{background:linear-gradient(180deg,var(--sand),#efe5d2)}
+  .safari-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .safari-card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+  .safari-card:hover{transform:translateY(-8px) rotate(-.4deg);box-shadow:0 18px 44px rgba(43,33,24,.18)}
+  .safari-img{position:relative;aspect-ratio:4/3;overflow:hidden}
+  .safari-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .safari-card:hover .safari-img img{transform:scale(1.06)}
+  .badge{position:absolute;top:14px;right:-8px;background:var(--pink);color:#fff;font-weight:800;font-size:1.05rem;padding:8px 16px;border-radius:12px;transform:rotate(3deg);box-shadow:0 6px 14px rgba(0,0,0,.25)}
+  .safari-body{padding:24px;display:flex;flex-direction:column;gap:12px;flex:1}
+  .safari-body h3{font-size:1.45rem;font-weight:800}
+  .safari-meta{font-size:.85rem;color:var(--mud-soft);font-weight:600}
+  .safari-desc{font-size:.95rem;flex:1}
+  .perks{list-style:none;display:grid;gap:6px;font-size:.88rem;color:var(--mud-soft)}
+  .perks li::before{content:"🪷 ";}
+
+  /* ---------- gallery ---------- */
+  .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:215px;gap:14px}
+  .g-item{position:relative;border:0;padding:0;background:none;cursor:zoom-in;border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .g-item:nth-child(1){grid-column:span 2;grid-row:span 2}
+  .g-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .g-item:hover img{transform:scale(1.07)}
+  .g-item::after{content:"⊕";position:absolute;right:12px;bottom:10px;color:#fff;font-size:1.3rem;opacity:0;transition:opacity .25s;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+  .g-item:hover::after{opacity:1}
+
+  /* ---------- lightbox ---------- */
+  .lightbox{position:fixed;inset:0;z-index:100;background:rgba(8,20,25,.94);display:grid;place-items:center;padding:24px}
+  .lightbox[hidden]{display:none}
+  .lightbox figure{max-width:min(1000px,94vw);text-align:center}
+  .lightbox img{max-height:78vh;width:auto;max-width:100%;border-radius:14px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .lightbox figcaption{color:#fff;margin-top:16px;font-size:1rem}
+  .lightbox figcaption small{display:block;color:rgba(255,255,255,.6);font-size:.8rem;margin-top:4px}
+  .lb-btn{position:absolute;background:rgba(255,255,255,.12);color:#fff;border:0;font-size:1.6rem;width:52px;height:52px;border-radius:50%;cursor:pointer;transition:background .2s}
+  .lb-btn:hover{background:rgba(255,255,255,.28)}
+  .lb-close{top:22px;right:22px}
+  .lb-prev{left:22px;top:50%;transform:translateY(-50%)}
+  .lb-next{right:22px;top:50%;transform:translateY(-50%)}
+
+  /* ---------- quotes ---------- */
+  .quotes{background:var(--river-ink);color:#fff}
+  .quotes .section-head h2{color:#fff}
+  .quotes .section-head p{color:rgba(255,255,255,.75)}
+  .carousel{position:relative;max-width:760px;margin:0 auto;min-height:280px}
+  .slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .6s;transform:translateY(10px)}
+  .slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .6s,transform .6s}
+  .slide blockquote{font-size:clamp(1.25rem,3vw,1.7rem);font-weight:600;line-height:1.45;text-align:center;padding:0 40px}
+  .slide blockquote::before{content:"“";display:block;font-size:3.4rem;color:var(--pink);line-height:.6;margin-bottom:14px}
+  .slide cite{display:block;text-align:center;margin-top:20px;font-style:normal;color:var(--sun);font-weight:700}
+  .dots{display:flex;gap:10px;justify-content:center;margin-top:26px}
+  .dot{width:12px;height:12px;border-radius:50%;border:0;background:rgba(255,255,255,.3);cursor:pointer;transition:background .2s,transform .2s;padding:0}
+  .dot.on{background:var(--pink);transform:scale(1.25)}
+
+  /* ---------- faq ---------- */
+  .faq-list{max-width:780px;margin:0 auto;display:grid;gap:14px}
+  .faq-item{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .faq-q{width:100%;background:none;border:0;font:inherit;font-weight:700;font-size:1.05rem;color:var(--mud);text-align:left;padding:20px 24px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .faq-q .chev{transition:transform .3s;color:var(--pink-deep);font-size:1.3rem;flex-shrink:0}
+  .faq-item.open .chev{transform:rotate(45deg)}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease}
+  .faq-a p{padding:0 24px 20px;color:var(--mud-soft)}
+
+  /* ---------- book ---------- */
+  .book{background:linear-gradient(160deg,var(--pink-soft),#fde8f1)}
+  .book-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:48px;align-items:start}
+  .book-info h2{font-size:clamp(1.9rem,4vw,2.7rem);font-weight:800;line-height:1.1;letter-spacing:-.02em}
+  .book-info p{margin-top:14px;color:var(--mud-soft)}
+  .book-info .fine{font-size:.82rem;margin-top:22px;background:rgba(255,255,255,.65);border-radius:12px;padding:12px 16px}
+  .book-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:32px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-weight:700;font-size:.88rem;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:2px solid #e5d9c5;background:#fff;transition:border-color .2s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--river);outline:none}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .book-success{text-align:center;padding:40px 20px}
+  .book-success .big{font-size:3.4rem}
+  .book-success h3{font-size:1.7rem;margin:10px 0 8px}
+  .book-success p{color:var(--mud-soft)}
+  .book-success .again{margin-top:20px;background:none;border:2px solid var(--mud);color:var(--mud);border-radius:999px;padding:10px 22px;font:inherit;font-weight:700;cursor:pointer}
+
+  /* ---------- footer ---------- */
+  footer{background:var(--mud);color:rgba(255,255,255,.75);padding:56px 20px 40px;font-size:.85rem}
+  .foot-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr;gap:40px}
+  .foot-grid h4{color:#fff;font-size:1rem;margin-bottom:12px}
+  .foot-brand{font-size:1.3rem;font-weight:800;color:#fff}
+  .foot-brand span{color:var(--pink)}
+  .credits{list-style:none;display:grid;gap:7px}
+  .credits a{color:var(--pink-soft);text-decoration:none}
+  .credits a:hover{text-decoration:underline}
+  .foot-bottom{max-width:1100px;margin:36px auto 0;padding-top:20px;border-top:1px solid rgba(255,255,255,.15);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:.78rem;color:rgba(255,255,255,.5)}
+
+  /* ---------- confetti ---------- */
+  #confetti{position:fixed;inset:0;z-index:200;pointer-events:none}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:920px){
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .why-grid{grid-template-columns:1fr}
+    .safari-grid{grid-template-columns:1fr;max-width:520px;margin:0 auto}
+    .gallery-grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:190px}
+    .book-grid{grid-template-columns:1fr}
+    .foot-grid{grid-template-columns:1fr}
+  }
+  @media (max-width:720px){
+    .nav-toggle{display:block}
+    .nav-links{position:absolute;top:100%;left:0;right:0;background:var(--sand);flex-direction:column;align-items:stretch;padding:14px 20px 20px;gap:4px;border-bottom:2px solid rgba(43,33,24,.1);box-shadow:0 18px 30px rgba(43,33,24,.15);display:none}
+    .nav-links.open{display:flex}
+    .nav-links a{padding:12px}
+    .nav-links a.nav-cta{margin-left:0;margin-top:6px;text-align:center}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}
+    .reveal{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top" aria-label="Mud and Bellow, back to top">
+      <span class="brand-hippo" id="brandHippo" title="Click for a bellow">🦛</span>
+      <span class="brand-name">Mud &amp; Bellow<small>Hippo Safari Co.</small></span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navLinks" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav-links" id="navLinks" aria-label="Main">
+      <a href="#why">Why Hippos</a>
+      <a href="#safaris">Safaris</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#faq">FAQ</a>
+      <a href="#book" class="nav-cta">Book a Safari</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero" aria-label="Welcome">
+    <div class="hero-bg" role="img" aria-label="Hippos resting along the Chobe River front in Botswana"></div>
+    <div class="hero-veil"></div>
+    <div class="hero-content">
+      <p class="kicker">Hippo safaris · Est. 1987 · 100% mud guaranteed</p>
+      <h1>Come say hello to<br><em>Africa's pink giants.</em></h1>
+      <p class="lede">We run small-boat hippo expeditions to the three best hippo hangouts on Earth. You bring the sense of adventure. We bring the rain ponchos.</p>
+      <div class="hero-actions">
+        <a class="btn btn-pink" href="#safaris">Pick your safari</a>
+        <button class="btn btn-ghost" id="bellowBtn" type="button">🔊 Try a bellow</button>
+      </div>
+    </div>
+    <a class="scroll-hint" href="#why">scroll <span>↓</span></a>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats" aria-label="Hippo statistics">
+    <div class="stats-grid">
+      <div class="stat"><span class="stat-num" data-count="30000" data-suffix="+">0</span><span class="stat-label">hippos in the Chobe basin alone</span></div>
+      <div class="stat"><span class="stat-num" data-count="180" data-suffix="°">0</span><span class="stat-label">maximum mouth opening. Yes, degrees.</span></div>
+      <div class="stat"><span class="stat-num" data-count="30" data-suffix=" km/h">0</span><span class="stat-label">top sprint speed on dry land</span></div>
+      <div class="stat"><span class="stat-num" data-count="4500" data-suffix=" lbs">0</span><span class="stat-label">a big bull, fully loaded with opinions</span></div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="section" id="why">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="squig">〰〰〰</p>
+        <h2>Why hippos?</h2>
+        <p>Because lions can wait. Hippos can't.</p>
+      </div>
+      <div class="why-grid">
+        <figure class="why-img reveal">
+          <img src="hippo-head-in-water.jpg"
+                alt="A hippo's head poking out of the water, eyes and ears above the surface" loading="lazy">
+          <figcaption>Eyes, ears and nostrils — that's all above water, and it's more than enough.</figcaption>
+        </figure>
+        <ul class="why-facts reveal">
+          <li><strong>Closer to whales than to pigs.</strong> Hippos' nearest living relatives are cetaceans. Their ancestors left the water, regretted it, and came right back.</li>
+          <li><strong>They make their own sunscreen.</strong> That famous pink "blood sweat" is a red secretion that works as SPF and an antibacterial. It's not blood. Probably.</li>
+          <li><strong>The 180° grin.</strong> They can open their mouths wide enough to fit a small car's wheel. The smile is for show. The bite is not.</li>
+          <li><strong>Africa's most dangerous big mammal.</strong> Hippos cause more human fatalities on the continent than lions, leopards or crocodiles. We keep our boats at a respectful distance.</li>
+        </ul>
+      </div>
+      <figure class="wide-img reveal">
+        <img src="hippopotamus-fight-serengeti.jpg"
+              alt="Two hippos locked in a fight, jaws wide open, in the Serengeti National Park" loading="lazy">
+        <span class="wide-tag">ACTUAL FOOTAGE (PHOTOGRAPHIC)</span>
+        <figcaption>Tuesday in the Serengeti. Our boats watch from a respectful — and very safe — distance.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- SAFARIS -->
+  <section class="section safaris" id="safaris">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="squig">〰〰〰</p>
+        <h2>Pick your muddy adventure</h2>
+        <p>Three rivers. Three pods. Zero apologies for the mud.</p>
+      </div>
+      <div class="safari-grid">
+
+        <article class="safari-card reveal">
+          <div class="safari-img">
+            <img src="hippo-chobe.jpg"
+                  alt="A hippo in the water at Chobe National Park, Botswana" loading="lazy">
+            <span class="badge">$899</span>
+          </div>
+          <div class="safari-body">
+            <h3>Chobe Chatter</h3>
+            <p class="safari-meta">📍 Chobe, Botswana · ⏱ 2 days · 👥 max 8</p>
+            <p class="safari-desc">The densest hippo population on Earth, front-row seats. Sunrise boat cruise, the famous sunset bellow show, and a mud spa where the hippos are included and you are optional.</p>
+            <ul class="perks">
+              <li>Sunrise &amp; sunset boat cruises</li>
+              <li>The sunset Bellow Show (free of charge, free of control)</li>
+              <li>Mud spa access (hippos included, you optional)</li>
+            </ul>
+            <button class="btn btn-pink" type="button" data-book="chobe">Book this →</button>
+          </div>
+        </article>
+
+        <article class="safari-card reveal">
+          <div class="safari-img">
+            <img src="common-hippos-serengeti.jpg"
+                  alt="A group of hippos wading in the water in the Serengeti, Tanzania" loading="lazy">
+            <span class="badge">$1,299</span>
+          </div>
+          <div class="safari-body">
+            <h3>Serengeti Sunset Snorkel</h3>
+            <p class="safari-meta">📍 Serengeti, Tanzania · ⏱ 3 days · 👥 max 10</p>
+            <p class="safari-desc">Track bull pods across the plains, witness a real (safe-distance) turf dispute, and end each day with sundowners at the baobab bar. Snorkeling is in the name only.</p>
+            <ul class="perks">
+              <li>Plains tracking with expert guides</li>
+              <li>Safe-distance turf dispute viewing</li>
+              <li>Sundowners at the baobab bar</li>
+            </ul>
+            <button class="btn btn-pink" type="button" data-book="serengeti">Book this →</button>
+          </div>
+        </article>
+
+        <article class="safari-card reveal">
+          <div class="safari-img">
+            <img src="lake-tana-bahir-dar.jpg"
+                  alt="Hippos on the shore of Lake Tana at Bahir Dar, Ethiopia" loading="lazy">
+            <span class="badge">$1,599</span>
+          </div>
+          <div class="safari-body">
+            <h3>Lake Tana Dawn Patrol</h3>
+            <p class="safari-meta">📍 Lake Tana, Ethiopia · ⏱ 4 days · 👥 max 6</p>
+            <p class="safari-desc">Dawn canoe patrols on Africa's largest highland lake, island monasteries, and hippos so completely unbothered by your existence it actually hurts. Our slowest, most magical trip.</p>
+            <ul class="perks">
+              <li>Dawn canoe patrols</li>
+              <li>Island monastery visits</li>
+              <li>Hippos who have decided you don't exist</li>
+            </ul>
+            <button class="btn btn-pink" type="button" data-book="tana">Book this →</button>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="section" id="gallery">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="squig">〰〰〰</p>
+        <h2>Proof it actually happened</h2>
+        <p>Click any photo for the full story. (It's a photo, but still.)</p>
+      </div>
+      <div class="gallery-grid" id="galleryGrid"></div>
+    </div>
+  </section>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button class="lb-btn lb-close" id="lbClose" aria-label="Close">✕</button>
+    <button class="lb-btn lb-prev" id="lbPrev" aria-label="Previous image">←</button>
+    <figure>
+      <img id="lbImg" src="" alt="">
+      <figcaption id="lbCap"></figcaption>
+    </figure>
+    <button class="lb-btn lb-next" id="lbNext" aria-label="Next image">→</button>
+  </div>
+
+  <!-- QUOTES -->
+  <section class="section quotes" id="quotes">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="squig">〰〰〰</p>
+        <h2>Word on the riverbank</h2>
+        <p>Real reviews from real, very muddy humans.</p>
+      </div>
+      <div class="carousel" id="carousel" aria-roledescription="carousel" aria-label="Guest testimonials">
+        <div class="slide on">
+          <blockquote>I've seen lions. I've seen leopards. Nothing prepares you for a three-tonne cow sneezing directly at your boat.</blockquote>
+          <cite>— Priya S. · Chobe Chatter</cite>
+        </div>
+        <div class="slide">
+          <blockquote>My hippo had a name. I had a mud stain the size of a dinner plate. 10/10, would bellow again.</blockquote>
+          <cite>— Marcus T. · Serengeti Sunset Snorkel</cite>
+        </div>
+        <div class="slide">
+          <blockquote>I asked the guide if we could get a little closer. The guide looked at me. The hippo looked at me. I understood.</blockquote>
+          <cite>— Dana K. · Lake Tana Dawn Patrol</cite>
+        </div>
+        <div class="slide">
+          <blockquote>Worth every drop of pink. (The hippos aren't actually pink. The mud is.)</blockquote>
+          <cite>— Tom &amp; Ana · honeymooners, now permanently 60% mud</cite>
+        </div>
+      </div>
+      <div class="dots" id="dots" role="tablist" aria-label="Choose testimonial"></div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="squig">〰〰〰</p>
+        <h2>Frequently asked (whispered) questions</h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">Are hippos actually dangerous? <span class="chev">+</span></button>
+          <div class="faq-a"><p>Yes, genuinely — hippos are responsible for more human deaths in Africa than any other large animal. Which is exactly why we are obsessed with them and why our guides are the calmest people you will ever meet. We keep boats at safe distances, we never feed, and we absolutely never make the "hippo face".</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">How wet will I get? <span class="chev">+</span></button>
+          <div class="faq-a"><p>Wet. Very wet. Our boats carry a waterproofing rating we describe internally as "nope". You will get splashed, you will get rained on, and at least one of you will get a full dunking. We include dry clothes, a towel, and emotional support.</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">What is the pink stuff? <span class="chev">+</span></button>
+          <div class="faq-a"><p>Hippos secrete a red, jelly-like substance often nicknamed "blood sweat". It's not blood — it's a natural sunscreen and antibacterial. It's also how the company got its color palette. You're welcome.</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">Do I have to swim with them? <span class="chev">+</span></button>
+          <div class="faq-a"><p>No. We do not recommend it. "Snorkel" in the Serengeti trip refers to the boat model (the Snorkel II), not to any activity you will be asked to do. If you jump in voluntarily, the guide is contractually required to watch from the shore.</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" aria-expanded="false">Can I bring my own bellow? <span class="chev">+</span></button>
+          <div class="faq-a"><p>We provide one — a proper rubber bellow, in your name, with a small brass plaque. Bellowing at hippos is technically permitted but strongly discouraged; bellowing at the sunset is not. That's what the Bellow Show is for.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOOK -->
+  <section class="section book" id="book">
+    <div class="wrap book-grid">
+      <div class="book-info">
+        <h2>Ready to get<br>properly muddy?</h2>
+        <p>Tell us where you want to end up (riverside) and how many humans are coming. A guide — an actual human with a whistle — will get back to you within one river-crossing (about 24 hours).</p>
+        <p class="fine">📎 Fine print: this is a demo booking form. No real safari will be booked, no real mud will be provided, and no real hippo will be offended. But the button is very satisfying to press.</p>
+      </div>
+      <div class="book-card">
+        <form id="bookForm" novalidate>
+          <div class="field">
+            <label for="fName">Your name</label>
+            <input id="fName" name="name" type="text" placeholder="e.g. Gwara the Magnificent" required>
+          </div>
+          <div class="field">
+            <label for="fEmail">Email</label>
+            <input id="fEmail" name="email" type="email" placeholder="you@example.com" required>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="fTour">Which safari?</label>
+              <select id="fTour" name="tour" required>
+                <option value="chobe">Chobe Chatter — $899</option>
+                <option value="serengeti">Serengeti Sunset Snorkel — $1,299</option>
+                <option value="tana">Lake Tana Dawn Patrol — $1,599</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="fSize">How many humans?</label>
+              <select id="fSize" name="size">
+                <option>1 (brave)</option>
+                <option selected>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+                <option>6 (maximum friendship)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="fDate">Preferred start date</label>
+            <input id="fDate" name="date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="fNotes">Anything we should know?</label>
+            <textarea id="fNotes" name="notes" rows="3" placeholder="Allergies, fears, bellowing experience level…"></textarea>
+          </div>
+          <button class="btn btn-pink" type="submit" style="width:100%">🦛 Send my bellow</button>
+        </form>
+        <div class="book-success" id="bookSuccess" hidden>
+          <div class="big">🦛💦</div>
+          <h3>Bellow received!</h3>
+          <p id="successMsg">Your pod has been assigned. Expect 100% mud and 0% refunds.</p>
+          <button class="again" id="bookAgain" type="button">Book another pod</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="foot-grid">
+    <div>
+      <p class="foot-brand">🦛 Mud <span>&amp;</span> Bellow</p>
+      <p style="margin-top:10px;max-width:420px">A fictional hippo safari company built as a demo website. No hippos were harmed, bribed, or booked in the making of this page. If you would like to see real hippos, consider a trip to Chobe — they are wonderful and mostly on your side (until you get close).</p>
+      <p style="margin-top:14px"><a href="https://commons.wikimedia.org" style="color:var(--pink-soft)">All photos from Wikimedia Commons</a> — thank you to the photographers below.</p>
+    </div>
+    <div>
+      <h4>Photo credits</h4>
+      <ul class="credits">
+        <li><a href="https://commons.wikimedia.org/wiki/File:Chobe_River_Front,_Botswana_(2625496300).jpg">Chobe River Front, Botswana</a> — Joachim Huber, CC BY-SA 2.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hippo_(Hippopotamus_amphibius)_head_in_water.jpg">Hippo head in water</a> — Charles J. Sharp, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:048_Hippopotamus_fight_in_the_Serengeti_National_Park_Photo_by_Giles_Laurent.jpg">Hippopotamus fight, Serengeti</a> — Giles Laurent, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hipop%C3%B3tamo_(Hippopotamus_amphibius),_parque_nacional_de_Chobe,_Botsuana,_2018-07-28,_DD_06.jpg">Hippo, Chobe</a> — Diego Delso, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Common_hippos_(Hippopotamus_amphibius_kiboko)_Serengeti.jpg">Common hippos, Serengeti</a> — Charles J. Sharp, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:ET_Amhara_asv2018-02_img068_Lake_Tana_at_Bahir_Dar.jpg">Lake Tana at Bahir Dar</a> — A. Savin, Free Art License</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Common_hippo_(Hippopotamus_amphibius_kiboko)_male_Serengeti.jpg">Male hippo, Serengeti</a> — Charles J. Sharp, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hippo_pod_edit.jpg">Hippo pod</a> — Paul Maritz, CC BY-SA 3.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hippopotamus_(Hippopotamus_amphibius)_juvenile_Kruger.jpg">Juvenile hippo, Kruger</a> — Charles J. Sharp, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hipop%C3%B3tamos_(Hippopotamus_amphibius),_parque_nacional_de_Chobe,_Botsuana,_2018-07-28,_DD_79.jpg">Hippo pod, Chobe</a> — Diego Delso, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hippopotamus_in_the_Zambezi.jpg">Hippopotamus in the Zambezi</a> — Bernard Gagnon, CC BY-SA 4.0</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Hippopotamus_(Hippopotamus_amphibius)_3.jpg">Hippopotamus</a> — Charles J. Sharp, CC BY-SA 4.0</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>© 2026 Mud &amp; Bellow Hippo Safari Co. — a fictional demo site.</span>
+    <span>Made with mud, pink, and one (1) HTML file.</span>
+  </div>
+</footer>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ image data ============ */
+  var IMG = {
+    male:      "hippo-male-serengeti.jpg",
+    pod:       "hippo-pod.jpg",
+    juv:       "hippo-juvenile-kruger.jpg",
+    chobepod:  "hippo-pod-chobe.jpg",
+    zambezi:   "hippopotamus-zambezi.jpg",
+    h3:        "hippopotamus-3.jpg",
+    sereng:    "common-hippos-serengeti.jpg",
+    head:      "hippo-head-in-water.jpg"
+  };
+  var GALLERY = [
+    {key:"male",     cap:"General Gwara — 2,400 kg of pure opinion.",              credit:"Photo: Charles J. Sharp · CC BY-SA 4.0 · Wikimedia Commons"},
+    {key:"pod",      cap:"The pod, pre-photoshoot.",                               credit:"Photo: Paul Maritz · CC BY-SA 3.0 · Wikimedia Commons"},
+    {key:"juv",      cap:"The next generation of trouble.",                        credit:"Photo: Charles J. Sharp · CC BY-SA 4.0 · Wikimedia Commons"},
+    {key:"chobepod", cap:"Chobe traffic: 200 hippos, one lane.",                   credit:"Photo: Diego Delso · CC BY-SA 4.0 · Wikimedia Commons"},
+    {key:"zambezi",  cap:"Zambezi commuter, mid-splash.",                          credit:"Photo: Bernard Gagnon · CC BY-SA 4.0 · Wikimedia Commons"},
+    {key:"h3",       cap:"Smiling. It's the most terrifying part.",                credit:"Photo: Charles J. Sharp · CC BY-SA 4.0 · Wikimedia Commons"},
+    {key:"sereng",   cap:"Serengeti group photo. Nobody asked for it.",            credit:"Photo: Charles J. Sharp · CC BY-SA 4.0 · Wikimedia Commons"},
+    {key:"head",     cap:"Eyes, ears, nose — the only parts above water.",         credit:"Photo: Charles J. Sharp · CC BY-SA 4.0 · Wikimedia Commons"}
+  ];
+  function src(key, w){ return IMG[key]; }
+
+  /* ============ build gallery ============ */
+  var grid = document.getElementById("galleryGrid");
+  GALLERY.forEach(function(g, i){
+    var b = document.createElement("button");
+    b.className = "g-item reveal";
+    b.type = "button";
+    b.setAttribute("aria-label", "Open photo: " + g.cap);
+    var img = document.createElement("img");
+    img.src = src(g.key, 960);
+    img.alt = g.cap;
+    img.loading = "lazy";
+    b.appendChild(img);
+    b.addEventListener("click", function(){ openLightbox(i); });
+    grid.appendChild(b);
+  });
+
+  /* ============ lightbox ============ */
+  var lb = document.getElementById("lightbox"),
+      lbImg = document.getElementById("lbImg"),
+      lbCap = document.getElementById("lbCap"),
+      lbIndex = 0;
+  function openLightbox(i){
+    lbIndex = i;
+    renderLb();
+    lb.hidden = false;
+    document.body.style.overflow = "hidden";
+    document.getElementById("lbClose").focus();
+  }
+  function renderLb(){
+    var g = GALLERY[lbIndex];
+    lbImg.src = src(g.key, 1920);
+    lbImg.alt = g.cap;
+    lbCap.innerHTML = g.cap + "<small>" + g.credit + "</small>";
+  }
+  function closeLightbox(){
+    lb.hidden = true;
+    document.body.style.overflow = "";
+  }
+  function step(d){ lbIndex = (lbIndex + d + GALLERY.length) % GALLERY.length; renderLb(); }
+  document.getElementById("lbClose").addEventListener("click", closeLightbox);
+  document.getElementById("lbPrev").addEventListener("click", function(){ step(-1); });
+  document.getElementById("lbNext").addEventListener("click", function(){ step(1); });
+  lb.addEventListener("click", function(e){ if(e.target === lb) closeLightbox(); });
+  document.addEventListener("keydown", function(e){
+    if(lb.hidden) return;
+    if(e.key === "Escape") closeLightbox();
+    if(e.key === "ArrowLeft") step(-1);
+    if(e.key === "ArrowRight") step(1);
+  });
+
+  /* ============ nav: mobile toggle + scrollspy ============ */
+  var navToggle = document.getElementById("navToggle"),
+      navLinks = document.getElementById("navLinks");
+  navToggle.addEventListener("click", function(){
+    var open = navLinks.classList.toggle("open");
+    navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  navLinks.addEventListener("click", function(e){
+    if(e.target.tagName === "A"){ navLinks.classList.remove("open"); navToggle.setAttribute("aria-expanded","false"); }
+  });
+
+  var spyLinks = Array.prototype.slice.call(navLinks.querySelectorAll("a"));
+  var sections = ["why","safaris","gallery","faq","book"].map(function(id){ return document.getElementById(id); });
+  var spy = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        spyLinks.forEach(function(a){
+          a.classList.toggle("active", a.getAttribute("href") === "#" + en.target.id);
+        });
+      }
+    });
+  }, {rootMargin:"-40% 0px -55% 0px"});
+  sections.forEach(function(s){ spy.observe(s); });
+
+  /* ============ reveal on scroll ============ */
+  var rev = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ en.target.classList.add("in"); rev.unobserve(en.target); }
+    });
+  }, {threshold:.12});
+  document.querySelectorAll(".reveal").forEach(function(el){ rev.observe(el); });
+
+  /* ============ counters ============ */
+  function animateCount(el){
+    var target = parseInt(el.getAttribute("data-count"), 10),
+        suffix = el.getAttribute("data-suffix") || "",
+        t0 = null, dur = 1600;
+    function frame(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1),
+          eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString("en-US") + suffix;
+      if(p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+  var cnt = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ animateCount(en.target); cnt.unobserve(en.target); }
+    });
+  }, {threshold:.6});
+  document.querySelectorAll(".stat-num").forEach(function(el){ cnt.observe(el); });
+
+  /* ============ carousel ============ */
+  var slides = Array.prototype.slice.call(document.querySelectorAll("#carousel .slide")),
+      dotsBox = document.getElementById("dots"),
+      cur = 0, timer = null;
+  slides.forEach(function(_, i){
+    var d = document.createElement("button");
+    d.className = "dot" + (i === 0 ? " on" : "");
+    d.type = "button";
+    d.setAttribute("role","tab");
+    d.setAttribute("aria-label","Testimonial " + (i+1));
+    d.addEventListener("click", function(){ show(i); restart(); });
+    dotsBox.appendChild(d);
+  });
+  var dots = Array.prototype.slice.call(dotsBox.children);
+  function show(i){
+    cur = (i + slides.length) % slides.length;
+    slides.forEach(function(s, j){ s.classList.toggle("on", j === cur); });
+    dots.forEach(function(d, j){ d.classList.toggle("on", j === cur); });
+  }
+  function restart(){
+    clearInterval(timer);
+    timer = setInterval(function(){ show(cur + 1); }, 5500);
+  }
+  var carousel = document.getElementById("carousel");
+  carousel.addEventListener("mouseenter", function(){ clearInterval(timer); });
+  carousel.addEventListener("mouseleave", restart);
+  restart();
+
+  /* ============ faq accordion ============ */
+  document.querySelectorAll(".faq-item").forEach(function(item){
+    var q = item.querySelector(".faq-q"), a = item.querySelector(".faq-a");
+    q.addEventListener("click", function(){
+      var open = item.classList.toggle("open");
+      q.setAttribute("aria-expanded", open ? "true" : "false");
+      a.style.maxHeight = open ? a.scrollHeight + "px" : "0px";
+    });
+  });
+
+  /* ============ bellow sound (WebAudio) ============ */
+  var actx = null;
+  function bellow(){
+    try{
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if(actx.state === "suspended") actx.resume();
+      var t = actx.currentTime;
+      var master = actx.createGain();
+      master.gain.setValueAtTime(0.0001, t);
+      master.gain.exponentialRampToValueAtTime(0.35, t + 0.1);
+      master.gain.setValueAtTime(0.35, t + 0.75);
+      master.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+      var filt = actx.createBiquadFilter();
+      filt.type = "lowpass"; filt.frequency.value = 420; filt.Q.value = 2;
+      var lfo = actx.createOscillator(), lfoGain = actx.createGain();
+      lfo.frequency.value = 22; lfoGain.gain.value = 14;
+      lfo.connect(lfoGain);
+      [[130,0.5],[97,0.35],[262,0.1]].forEach(function(pair){
+        var o = actx.createOscillator(), og = actx.createGain();
+        o.type = "sawtooth";
+        o.frequency.setValueAtTime(pair[0] * 1.6, t);
+        o.frequency.exponentialRampToValueAtTime(pair[0], t + 1.1);
+        lfoGain.connect(o.frequency);
+        og.gain.value = pair[1];
+        o.connect(og); og.connect(filt);
+        o.start(t); o.stop(t + 1.35);
+      });
+      lfo.start(t); lfo.stop(t + 1.35);
+      filt.connect(master); master.connect(actx.destination);
+    }catch(e){ /* audio not available — the bellow is silent but felt */ }
+  }
+  document.getElementById("bellowBtn").addEventListener("click", bellow);
+  var brandHippo = document.getElementById("brandHippo");
+  brandHippo.addEventListener("click", function(e){
+    e.preventDefault();
+    bellow();
+    brandHippo.classList.remove("honk");
+    void brandHippo.offsetWidth;
+    brandHippo.classList.add("honk");
+  });
+
+  /* ============ booking form ============ */
+  var TOURS = {
+    chobe: "Chobe Chatter", serengeti: "Serengeti Sunset Snorkel", tana: "Lake Tana Dawn Patrol"
+  };
+  document.querySelectorAll("[data-book]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.getElementById("fTour").value = btn.getAttribute("data-book");
+      document.getElementById("book").scrollIntoView({behavior:"smooth"});
+    });
+  });
+  var dateInput = document.getElementById("fDate");
+  dateInput.min = new Date().toISOString().split("T")[0];
+
+  var form = document.getElementById("bookForm"),
+      success = document.getElementById("bookSuccess");
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if(!form.checkValidity()){ form.reportValidity(); return; }
+    var name = document.getElementById("fName").value.trim().split(" ")[0] || "friend",
+        tour = TOURS[document.getElementById("fTour").value],
+        size = document.getElementById("fSize").value.split(" ")[0];
+    document.getElementById("successMsg").textContent =
+      "Thanks, " + name + "! " + size + " seat" + (size === "1" ? "" : "s") +
+      " on " + tour + " is pencilled in. Expect 100% mud, 0% refunds, and one (1) complimentary rubber bellow.";
+    form.hidden = true;
+    success.hidden = false;
+    var r = success.getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2);
+    bellow();
+  });
+  document.getElementById("bookAgain").addEventListener("click", function(){
+    success.hidden = true;
+    form.hidden = false;
+  });
+
+  /* ============ confetti ============ */
+  var canvas = document.getElementById("confetti"),
+      ctx = canvas.getContext("2d"),
+      pieces = [], raf = null;
+  function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+  addEventListener("resize", resize); resize();
+  function burst(x, y){
+    var colors = ["#f472b6","#0e7490","#fbbf24","#fbcfe8","#db2777","#155e75"];
+    for(var i = 0; i < 160; i++){
+      pieces.push({
+        x:x, y:y,
+        vx:(Math.random() - .5) * 16,
+        vy:Math.random() * -15 - 3,
+        s:Math.random() * 8 + 4,
+        c:colors[i % colors.length],
+        r:Math.random() * Math.PI,
+        vr:(Math.random() - .5) * .35,
+        life:1
+      });
+    }
+    if(!raf) tick();
+  }
+  function tick(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces = pieces.filter(function(p){ return p.life > 0 && p.y < canvas.height + 30; });
+    pieces.forEach(function(p){
+      p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.vx *= 0.99; p.r += p.vr; p.life -= 0.008;
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+      ctx.restore();
+    });
+    if(pieces.length){ raf = requestAnimationFrame(tick); }
+    else { raf = null; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  }
+})();
+</script>
+</body>
+</html>
