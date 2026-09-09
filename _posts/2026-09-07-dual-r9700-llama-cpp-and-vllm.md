@@ -115,7 +115,7 @@ and to switch from the default layer split to a tensor split, so that both cards
   -p "Explain the mechanics of gravitational time dilation."
 ```
 
-The result: prompt processing was relatively unchanged at 590 tokens per second, but generation climbed from 19.2 to 28 tokens per second — purely from a rebuild and a flag. It was progress, but it was still nowhere near the hundreds of tokens per second I'd seen reported for this hardware.
+The result: prompt processing increased to 1,458 tokens per second, and generation climbed from 19.2 to 28 tokens per second — purely from a rebuild and a flag. It was progress, but it was still nowhere near the hundreds of tokens per second I'd seen reported for this hardware.
 
 ## The breakthrough: vLLM + Radiance MXFP4
 
@@ -143,7 +143,7 @@ For the full journey, here is where the performance landed at each stage, all me
 | Stage | Prompt (tok/s) | Generation (tok/s) |
 | :---- | :---: | :---: |
 | llama.cpp, default build (Q8_0) | 590 | 19.2 |
-| llama.cpp, `gfx1201` + tensor split | 590 | 28 |
+| llama.cpp, `gfx1201` + tensor split | 1,458 | 29.7 |
 | vLLM + Radiance MXFP4 | 3,948 | 184.9 |
 
 </div>
